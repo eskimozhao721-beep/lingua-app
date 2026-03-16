@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0F172A">
 <title>Lingua</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}button{touch-action:manipulation;}
 :root{
   --g:#22C55E;--gd:#16A34A;--gl:#F0FDF4;--glb:#DCFCE7;
   --n:#0F172A;--nb:#1E293B;
@@ -80,11 +80,11 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 /* ── Sort bar ── */
 .sort-bar{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
 .sort-bar::-webkit-scrollbar{display:none;}
-.sort-btn{padding:5px 13px;font-size:12px;border:1px solid var(--bd);border-radius:var(--r-full);background:transparent;cursor:pointer;font-family:inherit;color:var(--tx2);white-space:nowrap;flex-shrink:0;font-weight:500;transition:all .18s;}
+.sort-btn{padding:5px 13px;font-size:12px;border:1px solid var(--bd);border-radius:var(--r-full);background:transparent;cursor:pointer;font-family:inherit;color:var(--tx2);white-space:nowrap;flex-shrink:0;font-weight:500;transition:all .18s;touch-action:manipulation;}
 .sort-btn.active{background:var(--n);color:#fff;border-color:var(--n);}
 
 /* ── Buttons ── */
-.btn{width:100%;padding:14px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:15px;cursor:pointer;font-weight:700;font-family:inherit;transition:all .18s;box-shadow:0 1px 2px rgba(34,197,94,0.3);}
+.btn{width:100%;padding:14px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:15px;cursor:pointer;font-weight:700;font-family:inherit;transition:all .18s;box-shadow:0 1px 2px rgba(34,197,94,0.3);touch-action:manipulation;}
 .btn:active{background:var(--gd);transform:scale(0.985);}
 .btn:disabled{opacity:.45;cursor:default;transform:none;}
 .btn-ghost{width:100%;padding:13px;background:transparent;color:var(--g);border:1.5px solid var(--g);border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;transition:all .18s;}
@@ -140,7 +140,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .prog-fill{height:100%;background:var(--g);border-radius:var(--r-full);transition:width .5s ease;}
 
 /* ── Quiz ── */
-.quiz-opt{width:100%;padding:13px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;cursor:pointer;background:transparent;text-align:left;color:var(--tx);font-family:inherit;margin-bottom:8px;transition:all .18s;font-weight:500;}
+.quiz-opt{width:100%;padding:13px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;cursor:pointer;background:transparent;text-align:left;color:var(--tx);font-family:inherit;margin-bottom:8px;transition:all .18s;font-weight:500;touch-action:manipulation;}
 .quiz-opt:hover:not(:disabled){border-color:var(--tx3);}
 .quiz-opt.correct{background:var(--glb);border-color:var(--g);color:var(--gd);}
 .quiz-opt.wrong{background:var(--redb);border-color:var(--red);color:var(--red);}
@@ -1254,23 +1254,27 @@ function resetP(){
 }
 function resetPFull(){S.pStopToday=false;resetP();}
 function practiceH(){
-  // 「今日はここまで」選択後の休憩画面
-  if(S.pStopToday)return`
-    <div style="text-align:center;padding:60px 20px">
-      <div style="font-size:60px;margin-bottom:16px">🌙</div>
-      <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>
-      <div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>
-      <button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button>
-    </div>`;
-  return`
-    <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
-    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;" class="sort-bar">
-      ${[['flash','🔁 フラッシュ'],['quiz_meaning','📖 意味選択'],['quiz_word','✍️ 単語選択'],['quiz_reading','🔊 発音→単語']].map(([k,l])=>
-        `<button class="sort-btn${S.pMode===k?' active':''}" style="flex-shrink:0" onclick="S.pMode='${k}';S.fSentenceMode=false;resetP();render()">${l}</button>`
-      ).join('')}
-    </div>
-    ${S.pMode==='flash'?flashH():quizH(S.pMode)}`;
+  if(S.pStopToday){
+    return '<div style="text-align:center;padding:60px 20px"><div style="font-size:60px;margin-bottom:16px">🌙</div>'
+      +'<div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>'
+      +'<div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>'
+      +'<button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button></div>';
+  }
+  const modes=[['flash','🔁 フラッシュ'],['quiz_meaning','📖 意味選択'],['quiz_word','✍️ 単語選択'],['quiz_reading','🔊 発音→単語']];
+  let h='';
+  h+='<div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>';
+  h+='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">'+(LANG[S.lang]?.flag||'')+' '+(LANG[S.lang]?.label||S.lang)+'</div>';
+  h+='<div id="practiceTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">';
+  for(const [k,l] of modes){
+    const a=S.pMode===k;
+    const bg=a?N:'var(--bg)';
+    const bd=a?G:'var(--bd)';
+    const cl=a?'#fff':'var(--tx2)';
+    h+='<button data-mode="'+k+'" class="ptab" style="padding:8px 14px;font-size:13px;border:1.5px solid '+bd+';border-radius:var(--r-full);background:'+bg+';color:'+cl+';cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;touch-action:manipulation;">'+l+'</button>';
+  }
+  h+='</div>';
+  h+=S.pMode==='flash'?flashH():quizH(S.pMode);
+  return h;
 }
 
 // ── Sentence practice helpers ──
@@ -1329,12 +1333,18 @@ function flashH(){
       `:S.fFlip?`
         <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">意味・読み</div>
         <div style="font-size:28px;font-weight:700;margin-bottom:8px;color:var(--tx)">${w.data.meaning}</div>
-        ${w.data.reading?`<div style="font-size:16px;color:${G};margin-bottom:14px;font-weight:500">${w.data.reading}</div>`:''}
-        ${spkH(w.data.word,w.lang,'発音を聞く')}
+        ${w.data.reading?`<div style="font-size:16px;color:${G};margin-bottom:4px;font-weight:500">${w.data.reading}</div>`:''}
       `:`
         <div style="font-size:40px;font-weight:800;margin:12px 0 10px;color:var(--tx);letter-spacing:-.02em">${w.data.word}</div>
         <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>
       `}
+    </div>
+    <div style="display:flex;justify-content:center;margin-bottom:10px">
+      <button onclick="event.stopPropagation();speak('${w.data.word.replace(/'/g,"\''")}','${w.lang}')"
+        style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:14px;cursor:pointer;font-family:inherit;color:var(--tx);font-weight:500;transition:all .18s">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:${G}"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        発音を聞く
+      </button>
     </div>
     ${S.fSentenceMode?sentencePracticeH(w,todayCount,canSentence):`
       ${S.fFlip?`<div class="flash-actions">
@@ -2004,6 +2014,13 @@ function showApp(){
       </nav>
     </div>`;
   render();
+  // Practice tab delegation
+  document.addEventListener('click',function(e){
+    const btn=e.target.closest('[data-mode]');
+    if(btn&&btn.classList.contains('ptab')){
+      S.pMode=btn.dataset.mode;S.fSentenceMode=false;resetP();render();
+    }
+  },{capture:false});
 }
 
 function render(){
