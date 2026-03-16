@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lingua">
+<title>Lingua</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--g:#4CAF50;--gd:#388E3C;--gl:#E8F5E9;--n:#1a1f3c;--bg:#fff;--bg2:#f7f7f5;--bg3:#efefed;--tx:#111;--tx2:#555;--tx3:#999;--bd:rgba(0,0,0,0.1);--bd2:rgba(0,0,0,0.2);}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--tx:#f2f2f7;--tx2:#aeaeb2;--tx3:#636366;--bd:rgba(255,255,255,0.1);--bd2:rgba(255,255,255,0.2);}}
+body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;min-height:100vh;display:flex;justify-content:center;}
+.app{width:100%;max-width:430px;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:0.5px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:20;gap:8px;}
+.lang-toggle{display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:3px;overflow-x:auto;}
+.lang-toggle::-webkit-scrollbar{display:none;}
+.lang-btn{padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;font-family:inherit;color:var(--tx2);border-radius:7px;white-space:nowrap;flex-shrink:0;}
+.lang-btn.active{background:var(--g);color:#fff;}
+.user-pill{display:flex;align-items:center;gap:5px;background:var(--bg2);border-radius:20px;padding:4px 8px 4px 5px;min-width:0;flex:1;}
+.user-av{width:20px;height:20px;border-radius:50%;background:var(--n);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;flex-shrink:0;}
+.user-em{font-size:11px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.logout-x{font-size:15px;color:var(--tx3);cursor:pointer;background:none;border:none;padding:2px;}
+.screen{flex:1;overflow-y:auto;padding:20px 16px 90px;-webkit-overflow-scrolling:touch;}
+.navbar{display:flex;border-top:0.5px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:20;padding-bottom:env(safe-area-inset-bottom);}
+.nav-item{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;font-size:10px;color:var(--tx3);-webkit-tap-highlight-color:transparent;}
+.nav-item.active{color:var(--g);}
+.nav-icon{font-size:18px;display:block;margin-bottom:2px;}
+.word-card{background:var(--bg);border:0.5px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.word-card:active{border-color:var(--g);}
+.tag{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;}
+.tag-ja{background:#E3F2FD;color:#1565C0;}
+.tag-fr{background:#E8F5E9;color:#2E7D32;}
+.tag-en{background:#F3E5F5;color:#6A1B9A;}
+.lv-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;}
+.mastered-badge{font-size:11px;padding:2px 9px;border-radius:20px;background:#E8F5E9;color:#2E7D32;font-weight:600;}
+.sort-bar{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+.sort-bar::-webkit-scrollbar{display:none;}
+.sort-btn{padding:5px 13px;font-size:12px;border:0.5px solid var(--bd);border-radius:20px;background:transparent;cursor:pointer;font-family:inherit;color:var(--tx2);white-space:nowrap;flex-shrink:0;}
+.sort-btn.active{background:var(--g);color:#fff;border-color:var(--g);}
+.btn{width:100%;padding:14px;background:var(--g);color:#fff;border:none;border-radius:12px;font-size:15px;cursor:pointer;font-weight:700;font-family:inherit;}
+.btn:active{background:var(--gd);}
+.btn:disabled{opacity:.45;cursor:default;}
+.btn-ghost{width:100%;padding:13px;background:transparent;color:var(--g);border:2px solid var(--g);border-radius:12px;font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;}
+.btn-back{background:none;border:0.5px solid var(--bd);border-radius:10px;font-size:14px;color:var(--tx);cursor:pointer;padding:8px 14px;margin-bottom:18px;font-family:inherit;}
+.add-btn{width:100%;padding:14px;border:1.5px dashed var(--bd2);border-radius:12px;background:transparent;font-size:14px;color:var(--tx3);cursor:pointer;margin-bottom:12px;font-family:inherit;}
+.inp{width:100%;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;font-size:16px;outline:none;font-family:inherit;background:var(--bg);color:var(--tx);}
+.inp:focus{border-color:var(--g);}
+.spk-btn{background:none;border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--g);font-family:inherit;display:inline-flex;align-items:center;gap:5px;}
+.sec-lbl{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx3);margin:20px 0 10px;text-transform:uppercase;}
+.info-blk{background:var(--bg2);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--tx2);margin-bottom:8px;line-height:1.6;}
+.ex-blk{background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.conj-sec{background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.tense-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+.tense-tab{padding:5px 12px;font-size:12px;border:1px solid var(--bd);border-radius:20px;cursor:pointer;background:transparent;font-family:inherit;color:var(--tx2);font-weight:500;}
+.tense-tab.active{background:var(--n);color:#fff;border-color:var(--n);}
+.conj-table{width:100%;border-collapse:collapse;font-size:13px;}
+.conj-table th{text-align:left;color:var(--tx3);font-weight:400;padding:6px 8px 6px 0;font-size:12px;width:38%;}
+.conj-table td{color:var(--tx);padding:6px 0;border-bottom:0.5px solid var(--bd);}
+.conj-table tr:last-child td{border-bottom:none;}
+.ipa{font-size:11px;color:var(--tx3);margin-left:5px;}
+.flash-card{border:1px solid var(--bd);border-radius:16px;padding:36px 24px;text-align:center;cursor:pointer;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:16px;}
+.flash-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-wrong{padding:14px;background:#FFEBEE;color:#B71C1C;border:none;border-radius:12px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;}
+.btn-correct{padding:14px;background:#E8F5E9;color:#2E7D32;border:none;border-radius:12px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;}
+.prog-bar{height:3px;background:var(--bg3);border-radius:2px;margin-bottom:20px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--g);border-radius:2px;transition:width .4s;}
+.quiz-opt{width:100%;padding:13px 14px;border:1px solid var(--bd);border-radius:12px;font-size:14px;cursor:pointer;background:transparent;text-align:left;color:var(--tx);font-family:inherit;margin-bottom:8px;}
+.quiz-opt.correct{background:#E8F5E9;border-color:var(--g);color:#2E7D32;}
+.quiz-opt.wrong{background:#FFEBEE;border-color:#E53935;color:#B71C1C;}
+.quiz-opt:disabled{cursor:default;}
+.quiz-fb{text-align:center;padding:10px;font-size:14px;font-weight:700;border-radius:10px;margin-bottom:10px;}
+.quiz-fb.correct{background:#E8F5E9;color:#2E7D32;}
+.quiz-fb.wrong{background:#FFEBEE;color:#B71C1C;}
+.mode-tabs{display:flex;gap:8px;margin-bottom:18px;}
+.mode-tab{flex:1;padding:10px 6px;border:1px solid var(--bd);border-radius:12px;font-size:12px;cursor:pointer;background:transparent;color:var(--tx2);font-family:inherit;text-align:center;white-space:nowrap;font-weight:500;}
+.mode-tab.active{background:var(--g);color:#fff;border-color:var(--g);}
+.w-topic{background:#E8F5E9;border-radius:12px;padding:16px;margin-bottom:14px;border:0.5px solid #C8E6C9;}
+.textarea{width:100%;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;font-size:15px;outline:none;font-family:inherit;background:var(--bg);color:var(--tx);resize:vertical;min-height:130px;line-height:1.6;}
+.textarea:focus{border-color:var(--g);}
+.c-ok{background:#E8F5E9;border:0.5px solid #C8E6C9;border-radius:10px;padding:14px;margin-bottom:10px;}
+.c-fix{background:#FFF8E1;border:0.5px solid #FFE082;border-radius:10px;padding:14px;margin-bottom:10px;}
+.c-lbl{font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.c-ok .c-lbl{color:#2E7D32;}.c-fix .c-lbl{color:#E65100;}
+.score-badge{display:inline-flex;align-items:center;gap:6px;background:#E8F5E9;border-radius:20px;padding:7px 16px;font-size:13px;color:#2E7D32;font-weight:700;margin-bottom:16px;}
+.kw-chip{padding:6px 13px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;font-size:13px;color:var(--tx2);cursor:pointer;display:inline-block;margin:0 5px 6px 0;}
+.kw-chip.used{background:#E8F5E9;border-color:var(--g);color:#2E7D32;}
+.spk-lg{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--g);color:#fff;border:none;border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--bg2);border-radius:12px;padding:16px;}
+.stat-lbl{font-size:12px;color:var(--tx2);margin-bottom:4px;}
+.stat-val{font-size:26px;font-weight:700;color:var(--tx);}
+.week-dots{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.day-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+.day-done{background:#E8F5E9;color:#2E7D32;}.day-todo{background:var(--bg2);color:var(--tx3);}
+.ebi-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
+.ebi-day{border-radius:8px;padding:5px 3px;text-align:center;font-size:11px;min-height:48px;}
+.ebi-none{background:var(--bg2);color:var(--tx3);}.ebi-light{background:#E8F5E9;color:#2E7D32;}.ebi-med{background:#E3F2FD;color:#1565C0;}.ebi-heavy{background:#FFF8E1;color:#E65100;}.ebi-today{background:var(--g);color:#fff;font-weight:700;}
+.empty-state{text-align:center;padding:48px 16px;color:var(--tx2);font-size:14px;line-height:1.8;}
+.err-msg{font-size:13px;margin-bottom:10px;padding:10px 13px;background:#FFEBEE;color:#B71C1C;border-radius:10px;}
+.loading-pulse{animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.dict-result{border:1px solid var(--g);border-radius:12px;padding:16px;margin-top:12px;background:var(--gl);}
+.sense-item{padding:6px 0;border-bottom:0.5px solid #C8E6C9;font-size:13px;color:var(--tx);}
+.sense-item:last-child{border-bottom:none;}
+.import-row{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;margin-bottom:5px;font-size:13px;}
+.import-row.pending{background:var(--bg2);}.import-row.active{background:#E3F2FD;animation:pulse 1s infinite;}.import-row.done{background:#E8F5E9;}.import-row.err{background:#FFEBEE;}.import-row.skip{background:var(--bg2);opacity:.55;}
+/* lang setup */
+.lang-card{border:2px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s;}
+.lang-card.active{border-color:var(--g);background:var(--gl);}
+.toggle-switch{width:44px;height:26px;border-radius:13px;background:var(--bg3);position:relative;transition:background .2s;flex-shrink:0;}
+.toggle-switch.on{background:var(--g);}
+.toggle-switch::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.toggle-switch.on::after{transform:translateX(18px);}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.5)}}
+/* 全屏作文输入 */
+.writing-fullscreen{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;padding:0;}
+.wf-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--bd);flex-shrink:0;}
+.wf-body{flex:1;display:flex;flex-direction:column;padding:12px 16px;gap:10px;overflow:hidden;}
+.wf-textarea{flex:1;width:100%;padding:14px;border:1px solid var(--bd);border-radius:12px;font-size:16px;outline:none;font-family:inherit;background:var(--bg);color:var(--tx);resize:none;line-height:1.7;}
+.wf-textarea:focus{border-color:var(--g);}
+.wf-kw{display:flex;flex-wrap:wrap;gap:5px;padding:8px 0;}
+.wf-footer{padding:10px 16px;border-top:0.5px solid var(--bd);flex-shrink:0;}
+.celebrate{position:fixed;top:50%;left:50%;pointer-events:none;font-size:40px;animation:floatUp 1.2s ease-out forwards;z-index:999;}
+</style>
+</head>
+<body>
+<div class="app"><div id="root"></div></div>
+<script>
+const G='#4CAF50',GD='#388E3C',GL='#E8F5E9',N='#1a1f3c';
+const LV_BG={A1:'#E8F5E9',A2:'#C8E6C9',B1:'#E3F2FD',B2:'#EDE7F6',C1:'#FFF8E1',C2:'#FCE4EC',N5:'#E8F5E9',N4:'#C8E6C9',N3:'#E3F2FD',N2:'#EDE7F6',N1:'#FFF8E1'};
+const LV_FG={A1:'#2E7D32',A2:'#1B5E20',B1:'#1565C0',B2:'#4527A0',C1:'#E65100',C2:'#880E4F',N5:'#2E7D32',N4:'#1B5E20',N3:'#1565C0',N2:'#4527A0',N1:'#E65100'};
+const LV_NUM={A1:1,A2:2,B1:3,B2:4,C1:5,C2:6,N5:1,N4:2,N3:3,N2:4,N1:5};
+const EBI=[1,3,7,14];
+
+// ── Language config ──
+const LANG_INFO={
+  fr:{label:'フランス語',flag:'🇫🇷',code:'fr-FR',dictName:'Wiktionary中文版'},
+  ja:{label:'日本語',flag:'🇯🇵',code:'ja-JP',dictName:'Jisho（プロキシ）'},
+  en:{label:'英語',flag:'🇬🇧',code:'en-US',dictName:'FreeDictionary'}
+};
+
+// ── Logo ──
+function logoFull(){return`<svg width="120" height="95" viewBox="0 0 120 95" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="60" height="52" rx="11" fill="var(--bg)" stroke="${G}" stroke-width="3"/><polygon points="11,54 24,54 15,68" fill="var(--bg)" stroke="${G}" stroke-width="3" stroke-linejoin="round" paint-order="stroke"/><rect x="19" y="15" width="56" height="46" rx="10" fill="${G}"/><polygon points="49,61 62,61 54,75" fill="${G}"/><text x="60" y="91" font-size="23" font-weight="700" fill="${N}" font-family="-apple-system,BlinkMacSystemFont,Helvetica,sans-serif" text-anchor="middle" letter-spacing="-0.3">Lingua</text></svg>`;}
+function logoSmall(){return`<svg width="75" height="21" viewBox="0 0 75 21" xmlns="http://www.w3.org/2000/svg"><rect x=".8" y=".8" width="15.5" height="13" rx="3.2" fill="var(--bg)" stroke="${G}" stroke-width="1.6"/><polygon points="2.8,13.8 6.8,13.8 4,18" fill="var(--bg)" stroke="${G}" stroke-width="1.6" stroke-linejoin="round" paint-order="stroke"/><rect x="5.2" y="3.8" width="13.5" height="11" rx="2.8" fill="${G}"/><polygon points="13.2,14.8 17,14.8 14.6,19.5" fill="${G}"/><text x="20" y="15" font-size="13" font-weight="700" fill="${N}" font-family="-apple-system,BlinkMacSystemFont,Helvetica,sans-serif" letter-spacing="-0.2">Lingua</text></svg>`;}
+
+// ── Import list ──
+const IMPORT_LIST=[
+  {word:"emprunter",lang:"fr"},{word:"surtout",lang:"fr"},{word:"songer",lang:"fr"},{word:"vertige",lang:"fr"},{word:"panique",lang:"fr"},{word:"merveilleux",lang:"fr"},{word:"interroger",lang:"fr"},{word:"pliage",lang:"fr"},{word:"espoir",lang:"fr"},{word:"escalader",lang:"fr"},{word:"obéir",lang:"fr"},{word:"absolu",lang:"fr"},{word:"éclair",lang:"fr"},{word:"dresser",lang:"fr"},{word:"tarder",lang:"fr"},{word:"sécurité",lang:"fr"},{word:"exécuter",lang:"fr"},{word:"honneur",lang:"fr"},{word:"royaume",lang:"fr"},{word:"pleur",lang:"fr"},
+  {word:"ニッカポッカ",lang:"ja"},{word:"ぽっこり",lang:"ja"},{word:"デキストリン",lang:"ja"},{word:"突捲る",lang:"ja"},{word:"立ち振る舞う",lang:"ja"}
+];
+
+const WRITING_TOPICS={
+  fr:[{title:"Ma journée idéale",sub:"描述你理想中的一天",hint:"时间顺序",kw:["se lever","matin","déjeuner","se promener","soir","tranquille","parfait"]},{title:"Mon repas préféré",sub:"介绍你最喜欢的食物",hint:"食材和味道",kw:["délicieux","ingrédient","cuisiner","goût","saveur","recette","famille"]},{title:"La ville où je vis",sub:"描述你所在的城市",hint:"地点和形容词",kw:["quartier","animé","calme","transports","parc","habitant","moderne"]},{title:"Mon weekend passé",sub:"回顾上个周末",hint:"复合过去时",kw:["j'ai visité","on a mangé","il faisait beau","ensemble","fatiguant","sympa","enfin"]},{title:"Mes projets pour l'été",sub:"分享夏日计划",hint:"将来时",kw:["je vais","partir","plage","vacances","avec des amis","j'espère","cette année"]}],
+  ja:[{title:"社会問題について",sub:"谈谈一个社会问题",hint:"N3↑：〜によって、〜ため、〜に対して",kw:["問題になっている","影響を与える","解決するためには","一方で","増加している","社会全体","重要だと思う"]},{title:"日本の文化と私",sub:"日本文化与你的关联",hint:"N3↑：〜として、〜ことで、〜ながら",kw:["独特な文化","影響を受けた","伝統的な","変化してきた","興味を持った","〜に比べて","受け継がれている"]},{title:"将来の夢と目標",sub:"描述你的未来梦想和目标",hint:"N3↑：〜ようにする、〜ために、〜と考えている",kw:["将来は","努力している","実現するために","〜という夢","必要だと感じる","乗り越えて","貢献したい"]},{title:"環境問題と私たち",sub:"环境问题与我们的生活",hint:"N3↑：〜によって引き起こされる、〜べきだ",kw:["環境破壊","気候変動","取り組む必要がある","〜に悪影響を与える","省エネ","持続可能な","一人一人が"]},{title:"テクノロジーと生活の変化",sub:"科技对生活的改变",hint:"N3↑：〜に伴い、〜をもたらした、〜とともに",kw:["急速に発展した","利便性が高まった","〜に依存する","デメリットとして","生活様式","コミュニケーション","今後は"]}],
+  en:[{title:"My ideal weekend",sub:"描述你理想的周末",hint:"使用will/would",kw:["wake up","morning","explore","dinner","relax","friends","perfect"]},{title:"My favorite food",sub:"介绍你最喜欢的食物",hint:"描述味道和记忆",kw:["delicious","taste","cook","ingredients","reminds me","whenever","special"]},{title:"The city I live in",sub:"描述你所在的城市",hint:"有哪些特色",kw:["located","known for","neighborhood","transportation","residents","modern","recommend"]},{title:"My last weekend",sub:"回顾上个周末",hint:"使用过去时",kw:["I went","we had","it was","although","finally","together","exhausted"]},{title:"My plans for summer",sub:"分享夏天计划",hint:"使用will/going to",kw:["I'm going to","travel","beach","hopefully","this year","spend time","can't wait"]}]
+};
+
+// ── Storage ──
+const ls=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+const lsDel=k=>{try{localStorage.removeItem(k);}catch(e){}};
+
+let U={email:'',sk:''};
+let S={
+  tab:'words',lang:'fr',view:'list',sel:null,
+  sortMode:'time',
+  enabledLangs:{fr:true,ja:true,en:false}, // language on/off
+  pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,
+  qIdx:0,qAns:null,qScore:{c:0,t:0},qFb:null,qTimer:null,
+  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',
+  tense:'present',
+  wTopicIdx:null,wText:'',wUsedKw:[],wLoad:false,wResult:null,wErr:'',wFullscreen:false,
+  wCurrentEssayId:null,wCurrentRevCount:null, // 今日の添削管理
+  wView:'write',
+  wHistory:[],wHistSel:null,
+  impRunning:false,impDone:false,
+  words:[]
+};
+
+function wordsKey(){return'lingua-words-'+U.sk;}
+function essaysKey(){return'lingua-essays-'+U.sk;}
+function settingsKey(){return'lingua-settings-'+U.sk;}
+
+function loadAll(){
+  // words
+  const rw=ls(wordsKey());if(rw){try{S.words=JSON.parse(rw);}catch(e){S.words=[];}}else S.words=[];
+  // essays
+  const re=ls(essaysKey());if(re){try{S.wHistory=JSON.parse(re);}catch(e){S.wHistory=[];}}else S.wHistory=[];
+  // settings (enabled langs)
+  const rs=ls(settingsKey());if(rs){try{const st=JSON.parse(rs);if(st.enabledLangs)S.enabledLangs=st.enabledLangs;}catch(e){}}
+  // make sure current lang is enabled
+  const active=Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])=>k);
+  if(active.length>0&&!S.enabledLangs[S.lang])S.lang=active[0];
+}
+function saveWords(){lsSet(wordsKey(),JSON.stringify(S.words));}
+function saveEssays(){lsSet(essaysKey(),JSON.stringify(S.wHistory));}
+
+// ── 毎日制限チェック ──
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function dailyTopicIdx(len){
+  // 日付をシードにして毎日違うトピックを返す（同じ日は同じトピック）
+  const d=new Date();
+  const seed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+  // 言語コードも混ぜて法語・日語・英語で別のトピックになるように
+  const langSeed={'fr':0,'ja':7,'en':13}[S.lang]||0;
+  return(seed+langSeed)%len;
+}
+function todayEssays(){
+  const today=todayStr();
+  return S.wHistory.filter(e=>e.lang===S.lang&&e.date&&new Date(e.date).toISOString().slice(0,10)===today);
+}
+function todayRevisions(){
+  // 今日書いた作文のAI修正回数（同じ作文への再修正も含む）
+  const today=todayStr();
+  return S.wHistory.filter(e=>e.lang===S.lang&&e.date&&new Date(e.date).toISOString().slice(0,10)===today&&e.isRevision).length;
+}
+function canWriteToday(){return todayEssays().length===0;}
+function revisionCountToday(){
+  const today=todayStr();
+  return S.wHistory.filter(e=>e.lang===S.lang&&e.date&&new Date(e.date).toISOString().slice(0,10)===today).length;
+}
+function tomorrowStr(){
+  const d=new Date();d.setDate(d.getDate()+1);
+  return d.toLocaleDateString('ja-JP',{month:'long',day:'numeric'});
+}
+function saveSettings(){lsSet(settingsKey(),JSON.stringify({enabledLangs:S.enabledLangs}));}
+function saveAuth(){lsSet('lingua-auth-v3',JSON.stringify(U));}
+
+// ── API (作文批改のみ) ──
+async function callApi(prompt,maxTokens=1200){
+  const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})});
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.content.map(i=>i.text||'').join('');
+}
+
+// ════════════════════════════════
+// 📖 FREE DICTIONARY APIs
+// ════════════════════════════════
+
+async function lookupJa(word){
+  // Jishoはブラウザから直接呼べないのでVercelプロキシ経由
+  const res=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
+  if(!res.ok)throw new Error('Jisho proxy error');
+  const d=await res.json();
+  if(!d.data||!d.data.length)throw new Error('見つかりませんでした');
+  const entry=d.data[0];
+  const jp=entry.japanese[0]||{};
+  const senses=entry.senses||[];
+  const jlpt=entry.jlpt&&entry.jlpt.length?entry.jlpt[0].replace('jlpt-','').toUpperCase():null;
+  // 日本語の意味：英語定義をそのまま使用（Jishoは英語のみ）
+  const allSenses=senses.slice(0,6).map((s,i)=>({
+    num:i+1,pos:s.parts_of_speech.slice(0,2).join(', '),
+    text:s.english_definitions.slice(0,4).join(', ')
+  }));
+  return{word:jp.word||word,reading:jp.reading||'',meanings:allSenses[0]?.text||'',allSenses,jlpt,delf:null,source:'Jisho'};
+}
+
+// 法语 → 中文Wiktionary（zh.wiktionary.org）
+async function lookupFr(word){
+  // zh.wiktionary.orgから法語→中文の定義を取得
+  try{
+    const res=await fetch('https://zh.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(res.ok){
+      const d=await res.json();
+      // zh.wiktionaryは言語コードで分かれている
+      const frDefs=d.fr||[];
+      if(frDefs.length>0){
+        const allSenses=[];
+        frDefs.forEach((def)=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach((defItem,i)=>{
+            // HTMLタグを除去して中国語の定義を取得
+            const text=(defItem.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)allSenses.push({num:allSenses.length+1,pos,text,example:defItem.example||''});
+          });
+        });
+        if(allSenses.length>0){
+          const delf=guessDelf(word);
+          return{word,reading:'',meanings:allSenses[0].text,allSenses:allSenses.slice(0,8),jlpt:null,delf,source:'中文Wiktionary'};
+        }
+      }
+    }
+  }catch(e){}
+
+  // fallback: en.wiktionaryのfr定義
+  try{
+    const res=await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(res.ok){
+      const d=await res.json();
+      const frDefs=d.fr||[];
+      if(frDefs.length>0){
+        const allSenses=frDefs.slice(0,6).map((def,i)=>({
+          num:i+1,pos:def.partOfSpeech||'',
+          text:(def.definitions||[]).map(d=>(d.definition||'').replace(/<[^>]*>/g,'')).filter(Boolean).join('; ')
+        })).filter(s=>s.text);
+        if(allSenses.length>0){
+          return{word,reading:'',meanings:allSenses[0].text,allSenses,jlpt:null,delf:guessDelf(word),source:'Wiktionary(EN)'};
+        }
+      }
+    }
+  }catch(e){}
+
+  throw new Error('「'+word+'」が見つかりませんでした。スペルを確認してください。');
+}
+
+// 英語 → FreeDictionary
+async function lookupEn(word){
+  try{
+    const res=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word));
+    if(res.ok){
+      const d=await res.json();
+      if(Array.isArray(d)&&d.length){
+        const entry=d[0];
+        const phonetic=entry.phonetic||entry.phonetics?.find(p=>p.text)?.text||'';
+        const allSenses=[];
+        (entry.meanings||[]).forEach(m=>{
+          (m.definitions||[]).slice(0,3).forEach(def=>{
+            allSenses.push({pos:m.partOfSpeech,text:def.definition,example:def.example||''});
+          });
+        });
+        return{word:entry.word||word,reading:phonetic,meanings:allSenses[0]?.text||'',allSenses:allSenses.slice(0,6),jlpt:null,delf:null,source:'FreeDictionary'};
+      }
+    }
+  }catch(e){}
+  throw new Error('「'+word+'」が見つかりませんでした。');
+}
+
+// 統合lookup関数
+async function lookupFrEn(word,lang){
+  if(lang==='fr')return lookupFr(word);
+  return lookupEn(word);
+}
+
+function guessDelf(w){
+  const common=['être','avoir','aller','faire','dire','voir','vouloir','pouvoir','savoir','venir','prendre','partir','mettre','aimer','manger','boire','dormir','maison','famille','ami','école','travail','ville','pays','jour','temps'];
+  if(common.includes(w.toLowerCase()))return'A1';
+  if(w.length<=6)return'A2';
+  if(w.length<=9)return'B1';
+  return'B2';
+}
+
+async function doLookup(){
+  const inp=document.getElementById('addInput');
+  const word=(inp?inp.value:S.addInput).trim();
+  if(!word)return;
+  S.addInput=word;S.addLoading=true;S.addResult=null;S.addErr='';render();
+  try{
+    const result=S.lang==='ja'?await lookupJa(word):await lookupFrEn(word,S.lang);
+    S.addResult=result;
+  }catch(e){S.addErr='「'+word+'」が見つかりませんでした。スペルを確認してください。';}
+  S.addLoading=false;render();
+}
+
+// ── Helpers ──
+// 各言語で最も自然な声を優先順位付きで選択
+const VOICE_PREF={
+  'fr':['Google français','Microsoft Julie','Amelie','Thomas','Marie','fr-FR'],
+  'ja':['Google 日本語','Microsoft Haruka','Kyoko','Otoya','O-ren','ja-JP'],
+  'en':['Google US English','Microsoft Zira','Samantha','Karen','en-US']
+};
+let _voiceCache={};
+function getBestVoice(lang){
+  if(_voiceCache[lang])return _voiceCache[lang];
+  const voices=window.speechSynthesis.getVoices();
+  const prefs=VOICE_PREF[lang]||[LANG_INFO[lang]?.code||'en-US'];
+  const code=LANG_INFO[lang]?.code||'en-US';
+  // 1. 名前で完全一致
+  for(const p of prefs){const v=voices.find(x=>x.name===p);if(v){_voiceCache[lang]=v;return v;}}
+  // 2. 名前の部分一致
+  for(const p of prefs){const v=voices.find(x=>x.name.includes(p));if(v){_voiceCache[lang]=v;return v;}}
+  // 3. 言語コード一致（online優先）
+  const byLang=voices.filter(x=>x.lang.startsWith(code.slice(0,2)));
+  const online=byLang.find(x=>!x.localService);
+  if(online){_voiceCache[lang]=online;return online;}
+  if(byLang[0]){_voiceCache[lang]=byLang[0];return byLang[0];}
+  return null;
+}
+function speak(t,l){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);
+  u.lang=LANG_INFO[l]?.code||'en-US';
+  u.rate=l==='ja'?0.8:0.82;
+  u.pitch=1.0;
+  const doSpeak=()=>{
+    _voiceCache={};// キャッシュリセットして再取得
+    const v=getBestVoice(l);
+    if(v)u.voice=v;
+    window.speechSynthesis.speak(u);
+  };
+  if(window.speechSynthesis.getVoices().length>0)doSpeak();
+  else{window.speechSynthesis.onvoiceschanged=()=>{doSpeak();window.speechSynthesis.onvoiceschanged=null;};}
+}
+function activeLangs(){return Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])=>k);}
+function switchTab(t){S.tab=t;S.view='list';S.wView='write';S.wFullscreen=false;if(t==='writing'){S.wCurrentEssayId=null;S.wCurrentRevCount=null;}if(t==='practice')resetP();render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===t));}
+function setLang(l){S.lang=l;S.wCurrentEssayId=null;S.wCurrentRevCount=null;document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));if(S.tab==='practice')resetP();render();}
+function resetP(){const v=S.words.filter(w=>w.lang===S.lang&&w.data);S.fSess=[...v].sort(()=>Math.random()-.5);S.fIdx=0;S.fFlip=false;S.fDone=false;S.qIdx=0;S.qAns=null;S.qScore={c:0,t:0};S.qFb=null;clearTimeout(S.qTimer);}
+function tagH(l){const info=LANG_INFO[l];return`<span class="tag tag-${l}">${info?info.flag+' '+info.label.slice(0,2):l}</span>`;}
+function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
+function spkH(t,l,lb){const e=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<button class="spk-btn" onclick="speak('${e}','${l}')">▶${lb?' '+lb:''}</button>`;}
+function sorted(){
+  const ws=S.words.filter(w=>w.lang===S.lang);
+  if(S.sortMode==='mastery')return[...ws].sort((a,b)=>{const am=a.mastered?1:0,bm=b.mastered?1:0;if(am!==bm)return bm-am;return b.reviewCount-a.reviewCount;});
+  if(S.sortMode==='level')return[...ws].sort((a,b)=>(LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99));
+  return[...ws].sort((a,b)=>b.addedAt-a.addedAt);
+}
+function importedSet(){
+  const s=new Set();
+  S.words.forEach(w=>{if(w.word)s.add(w.word.toLowerCase().trim());if(w.data&&w.data.word)s.add(w.data.word.toLowerCase().trim());});
+  return s;
+}
+function celebrate(){const em=['🌸','💐','✨','🎉','💖','🌺'];for(let i=0;i<3;i++){setTimeout(()=>{const el=document.createElement('div');el.className='celebrate';el.textContent=em[Math.floor(Math.random()*em.length)];el.style.marginLeft=(-30+Math.random()*60)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1300);},i*150);}}
+
+// ── Words list ──
+function wordsListH(){
+  const words=sorted();
+  const pi=IMPORT_LIST.filter(i=>i.lang===S.lang&&!importedSet().has(i.word.toLowerCase()));
+  return`
+    <div style="font-size:22px;font-weight:700;margin-bottom:2px;color:var(--tx)">単語帳</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang} · ${words.length}語</div>
+    ${pi.length>0?`<div style="background:#E3F2FD;border-radius:12px;padding:11px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:#1565C0;font-weight:500">📥 ${pi.length}語 未インポート</span><button onclick="switchTab('import')" style="font-size:12px;padding:5px 13px;background:${N};color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600">インポート</button></div>`:''}
+    <button class="add-btn" onclick="setView('add')">＋ 新しい単語を追加</button>
+    <div class="sort-bar">
+      ${[['time','🕐 追加順'],['mastery','⭐ 習得度'],['level','📊 難易度']].map(([k,l])=>`<button class="sort-btn${S.sortMode===k?' active':''}" onclick="S.sortMode='${k}';render()">${l}</button>`).join('')}
+    </div>
+    ${words.length===0?'<div class="empty-state">まだ単語がありません</div>':''}
+    ${words.map(w=>`<div class="word-card" onclick="selWord('${w.id}')">
+      <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:3px">${w.data.word}</div>
+      <div style="font-size:13px;color:${G};margin-bottom:3px">${w.data.reading||''}</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">${w.data.meaning}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        ${tagH(w.lang)} ${lvH(w.data)}
+        ${w.mastered?'<span class="mastered-badge">習得済み ✓</span>':''}
+        <span style="font-size:11px;color:var(--tx3)">${w.reviewCount>0?'復習'+w.reviewCount+'回':'新規'}</span>
+      </div>
+    </div>`).join('')}`;
+}
+
+// ── Add ──
+function addH(){
+  const r=S.addResult;
+  const info=LANG_INFO[S.lang];
+  const isGenerating=S.addAiLoading;
+  return`
+    <button class="btn-back" onclick="setView('list')">← 戻る</button>
+    <div style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--tx)">単語を追加</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">${info?.flag||''} ${info?.label||S.lang}</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="background:${GL};color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">📖 辞書</span>
+      <span style="color:var(--tx3)">+</span>
+      <span style="background:#FFF8E1;color:#E65100;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">⚡ AI</span>
+      <span style="font-size:11px;color:var(--tx3)">追加時に1回だけ呼び出し・永久保存</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <input id="addInput" class="inp" placeholder="${S.lang==='ja'?'例：食べる、綺麗':S.lang==='fr'?'例：partir, merveilleux':'例：beautiful, run'}"
+        value="${S.addInput.replace(/"/g,'&quot;')}" oninput="S.addInput=this.value"
+        onkeydown="if(event.key==='Enter')doLookup()"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button onclick="doLookup()" style="padding:12px 18px;background:${G};color:#fff;border:none;border-radius:12px;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0;font-weight:700">
+        ${S.addLoading?'検索中...':'🔍 検索'}
+      </button>
+    </div>
+    ${S.addErr?`<div class="err-msg" style="margin-top:8px">${S.addErr}</div>`:''}
+    ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
+    ${r?addResultH(r):''}`;
+}
+
+function addResultH(r){
+  return`
+    <div class="dict-result">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#fff;border:1px solid ${G};color:#2E7D32;font-weight:600">📖 ${r.source}</span>
+        ${r.jlpt?`<span class="lv-badge" style="background:${LV_BG[r.jlpt]};color:${LV_FG[r.jlpt]}">${r.jlpt}</span>`:''}
+        ${r.delf?`<span class="lv-badge" style="background:${LV_BG[r.delf]};color:${LV_FG[r.delf]}">${r.delf}</span>`:''}
+      </div>
+      <div style="font-size:24px;font-weight:700;color:var(--tx);margin-bottom:4px">${r.word}</div>
+      ${r.reading?`<div style="font-size:15px;color:${G};margin-bottom:10px">${r.reading} ${spkH(r.word,S.lang,'')}</div>`:`<div style="margin-bottom:10px">${spkH(r.word,S.lang,'発音')}</div>`}
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">定義</div>
+      ${(r.allSenses||[]).map(s=>`<div class="sense-item">
+        ${s.pos?`<span style="font-size:11px;color:#1565C0;font-weight:600;margin-right:5px">${s.pos}</span>`:''}
+        ${s.num?`<span style="font-size:11px;color:var(--tx3);margin-right:4px">${s.num}.</span>`:''}
+        ${s.text}
+        ${s.example?`<div style="font-size:12px;color:var(--tx3);margin-top:3px;font-style:italic">${s.example}</div>`:''}
+      </div>`).join('')}
+      <div style="margin-top:14px">
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">メモ（中国語で意味を書く・任意）</div>
+        <input class="inp" id="addMemo" placeholder="例：离开，出发 / 吃" style="margin-bottom:14px"
+          oninput="S.addMemo=this.value" value="${(S.addMemo||'').replace(/"/g,'&quot;')}">
+      </div>
+      ${S.addAiLoading?`
+        <div style="background:#FFF8E1;border-radius:10px;padding:16px;text-align:center;margin-bottom:10px">
+          <div class="loading-pulse" style="font-size:14px;color:#E65100">⚡ AIが活用・例文・搭配を生成中...</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:6px">このデータは永久保存されます</div>
+        </div>
+        <button class="btn" disabled>追加中...</button>
+      `:`
+        <button class="btn" onclick="confirmAdd()">
+          ＋ 単語帳に追加（AI生成付き）
+        </button>
+      `}
+    </div>`;
+}
+
+// ── 極小prompt構築（token最小化）──
+// 法語動詞活用テンプレ（使い回し）
+const FR_CONJ_SCHEMA='{"present":[{"p":"je","f":"","i":""},{"p":"tu","f":"","i":""},{"p":"il/elle","f":"","i":""},{"p":"nous","f":"","i":""},{"p":"vous","f":"","i":""},{"p":"ils","f":"","i":""}],"passe":[{"p":"jai","f":""},{"p":"tu as","f":""},{"p":"il a","f":""},{"p":"nous avons","f":""},{"p":"vous avez","f":""},{"p":"ils ont","f":""}],"imparfait":[{"p":"je","f":""},{"p":"nous","f":""},{"p":"ils","f":""}],"futur":[{"p":"je","f":""},{"p":"nous","f":""},{"p":"ils","f":""}]}';
+// Note: "jai" displays as "j'ai" - restore apostrophe when rendering
+const JA_CONJ_SCHEMA='{"基":[{"l":"辞書形","f":"","r":""},{"l":"ます形","f":"","r":""},{"l":"て形","f":"","r":""},{"l":"た形","f":"","r":""}],"否":[{"l":"ない形","f":"","r":""},{"l":"ません","f":"","r":""}],"他":[{"l":"可能","f":"","r":""},{"l":"意向","f":"","r":""},{"l":"条件","f":"","r":""}]}';
+
+function isVerb(pos){
+  if(!pos)return false;
+  const p=pos.toLowerCase();
+  return p.includes('verb')||p.includes('動詞')||p.includes('verbe')||p.includes('v.');
+}
+function isNoun(pos){
+  if(!pos)return false;
+  const p=pos.toLowerCase();
+  return p.includes('noun')||p.includes('名詞')||p.includes('nom')||p.includes('n.');
+}
+
+function buildWordPrompt(word,meaning,lang,pos){
+  const verb=isVerb(pos);
+  const noun=isNoun(pos);
+  if(lang==='fr'){
+    const genderPart=noun?',"gender":{"masc":"","fem":null,"mascPl":"","irregular":false}':',"gender":null';
+    const conjPart=verb?',"conjugations":'+FR_CONJ_SCHEMA:',"conjugations":null';
+    return `FR单词「${word}」(${meaning})。JSON only:{"reading":"/IPA/"${genderPart},"examples":[{"text":"","trans":"中文"},{"text":"","trans":"中文"}],"grammar":"中文要点","related":"相关词","wordFamily":[{"word":"","pos":"","meaning":""},{"word":"","pos":"","meaning":""}]${conjPart},"collocations":[{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"}]}`;
+  }
+  if(lang==='ja'){
+    const conjPart=verb?',"conjugations":'+JA_CONJ_SCHEMA:',"conjugations":null';
+    return `日语单词「${word}」(${meaning})。JSON only:{"reading":"假名(罗马字)","examples":[{"text":"","trans":"中文"},{"text":"","trans":"中文"}],"grammar":"中文要点","related":"相关词","wordFamily":[{"word":"","pos":"","meaning":""},{"word":"","pos":"","meaning":""}]${conjPart},"collocations":[{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"}]}`;
+  }
+  // English
+  return `EN word「${word}」(${meaning})。JSON only:{"reading":"/IPA/","examples":[{"text":"","trans":"中文"},{"text":"","trans":"中文"}],"grammar":"中文要点","related":"related words","wordFamily":[{"word":"","pos":"","meaning":""},{"word":"","pos":"","meaning":""}],"conjugations":null,"collocations":[{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"}]}`;
+}
+
+async function confirmAdd(){
+  const r=S.addResult;if(!r)return;
+  const memo=document.getElementById('addMemo')?.value.trim()||S.addMemo||'';
+  const meaning=memo||r.allSenses?.[0]?.text||r.meanings||'';
+  const isFr=S.lang==='fr';
+
+  // まずAI無しで即時保存（IDを確定）
+  const nw={
+    id:Date.now().toString(),word:r.word,lang:S.lang,
+    data:{word:r.word,reading:r.reading||'',meaning,
+      delf:isFr?(r.delf||null):null,jlpt:S.lang==='ja'?(r.jlpt||null):null,
+      gender:null,pluralNote:null,examples:[],grammar:'',related:'',wordFamily:[],
+      conjugations:null,collocations:[],source:r.source,allSenses:r.allSenses||[],
+      aiEnriched:false},
+    reviewCount:0,mastered:false,addedAt:Date.now()
+  };
+  S.words=[nw,...S.words];saveWords();
+
+  // AI生成開始（ローディング表示）
+  S.addAiLoading=true;render();
+
+  const prompt=buildWordPrompt(r.word,meaning,S.lang,r.allSenses?.[0]?.pos||'');
+
+  try{
+    const t=await callApi(prompt,1200);
+    const ai=JSON.parse(t.replace(/```json|```/g,'').trim());
+    // 既存データにAI生成データをマージ
+    const idx=S.words.findIndex(w=>w.id===nw.id);
+    if(idx>=0){
+      const d=S.words[idx].data;
+      if(ai.reading)d.reading=ai.reading;
+      if(ai.gender)d.gender=ai.gender;
+      if(ai.pluralNote)d.pluralNote=ai.pluralNote;
+      if(ai.examples?.length)d.examples=ai.examples;
+      if(ai.grammar)d.grammar=ai.grammar;
+      if(ai.related)d.related=ai.related;
+      if(ai.wordFamily?.length)d.wordFamily=ai.wordFamily;
+      if(ai.conjugations)d.conjugations=ai.conjugations;
+      if(ai.collocations?.length)d.collocations=ai.collocations;
+      d.aiEnriched=true;
+      saveWords();
+    }
+  }catch(e){
+    // AI失敗しても単語は既に保存済みなので問題なし
+    console.warn('AI enrichment failed:',e.message);
+  }
+
+  S.addAiLoading=false;
+  S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';
+  celebrate();setView('list');
+}
+
+// ── Detail ──
+function detailH(){
+  const w=S.sel;if(!w)return'';
+  const d=w.data;
+  return`
+    <button class="btn-back" onclick="setView('list')">← 戻る</button>
+    <div style="font-size:28px;font-weight:700;margin-bottom:6px;color:var(--tx)">${d.word}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      ${d.reading?`<span style="font-size:16px;color:${G}">${d.reading}</span>`:''}
+      ${spkH(d.word,w.lang,'読み上げ')}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      ${tagH(w.lang)} ${lvH(d)}
+      <span style="font-size:14px;color:var(--tx2)">${d.meaning}</span>
+    </div>
+    ${d.allSenses&&d.allSenses.length?`
+      <div class="sec-lbl">辞書の定義 <span style="font-size:10px;font-weight:400;background:var(--bg3);padding:2px 7px;border-radius:8px;color:var(--tx3)">${d.source||''}</span></div>
+      <div class="info-blk" style="padding:8px 14px">
+        ${d.allSenses.slice(0,5).map(s=>`<div class="sense-item">
+          ${s.pos?`<span style="font-size:11px;color:#1565C0;font-weight:600;margin-right:5px">${s.pos}</span>`:''}
+          ${s.num?`<span style="font-size:11px;color:var(--tx3);margin-right:4px">${s.num}.</span>`:''}
+          ${s.text}
+        </div>`).join('')}
+      </div>`:''}
+    ${d.grammar?`<div class="sec-lbl">文法のポイント</div><div class="info-blk">${d.grammar}</div>`:''}
+    ${d.related?`<div class="sec-lbl">関連語彙</div><div class="info-blk">${d.related}</div>`:''}
+    ${d.conjugations?conjH(d.conjugations,w.lang):''}
+    ${d.collocations&&d.collocations.length?collocH(d.collocations):''}
+    ${d.wordFamily&&d.wordFamily.length?wordFamilyH(d.wordFamily):''}
+    ${!d.aiEnriched?`<div style="background:#FFF8E1;border:0.5px solid #FFE082;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:13px;color:#E65100">⚡ AI情報未生成 — <button onclick="enrichWord('${w.id}')" style="color:#E65100;font-weight:700;background:none;border:none;cursor:pointer;font-family:inherit;text-decoration:underline">今すぐ生成</button></div>`:''}
+    <div style="height:12px"></div>
+    <button class="btn" onclick="goPractice()">この単語を練習する</button>`;
+}
+
+// ── Rich content helpers ──
+function conjH(c,lang){
+  if(!c)return'';
+  if(lang==='ja'){
+    // 新旧両方のキー名に対応
+    const jaLabels={'基本形':'基本形','否定形':'否定形','応用形':'応用形','基':'基本形','否':'否定形','他':'応用形'};
+    return'<div class="sec-lbl">動詞活用</div>'+Object.entries(c).map(([t,rows])=>`<div class="conj-sec"><div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">${jaLabels[t]||t}</div><table class="conj-table">${rows.map(r=>`<tr><th>${r.label||r.l||''}</th><td>${r.form||r.f||''} <span class="ipa">${r.reading||r.r||''}</span> ${spkH(r.form||r.f||'','ja','')}</td></tr>`).join('')}</table></div>`).join('');
+  }
+  // フランス語（新旧両方のキー名に対応）
+  const nm={present:'現在形',passe:'複合過去',imparfait:'半過去',futur:'単純未来'};
+  const ts=Object.keys(c);
+  if(!ts.length)return'';
+  if(!S.tense||!c[S.tense])S.tense=ts[0];
+  const ac=S.tense;
+  return`<div class="sec-lbl">動詞活用</div>
+    <div class="tense-tabs">${ts.map(t=>`<button class="tense-tab${t===ac?' active':''}" onclick="S.tense='${t}';render()">${nm[t]||t}</button>`).join('')}</div>
+    <div class="conj-sec"><table class="conj-table">${(c[ac]||[]).map(r=>{const pronoun=(r.pronoun||r.p||'').replace('jai',"j'ai");const form=r.form||r.f||'';const ipa=r.ipa||r.i||'';return`<tr><th>${pronoun}</th><td>${form} <span class="ipa">${ipa}</span> ${spkH(pronoun+' '+form,'fr','')}</td></tr>`;}).join('')}</table></div>`;
+}
+function collocH(cs){
+  if(!cs||!cs.length)return'';
+  return`<div class="sec-lbl">よく使う表現</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${cs.map(c=>`<span style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px;cursor:default;color:var(--tx)">${c.phrase}${c.meaning?` <span style="font-size:11px;color:var(--tx3)">— ${c.meaning}</span>`:''}</span>`).join('')}</div>`;
+}
+function wordFamilyH(fam){
+  if(!fam||!fam.length)return'';
+  return`<div class="sec-lbl">語族展開</div>${fam.map(f=>`<div style="border:0.5px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between"><div><span style="font-size:15px;font-weight:600;color:var(--tx)">${f.word}</span><span style="font-size:13px;color:var(--tx2);margin-left:8px">${f.meaning}</span></div><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg2);color:var(--tx2)">${f.pos}</span></div>`).join('')}`;
+}
+
+// 既存単語にAI情報を後から追加
+async function enrichWord(id){
+  const w=S.words.find(x=>x.id===id);if(!w)return;
+  const d=w.data;
+  const meaning=d.meaning||'';
+  const langName={'fr':'法语','ja':'日语','en':'英语'}[w.lang]||'英语';
+  const isFr=w.lang==='fr',isJa=w.lang==='ja';
+  const prompt=buildWordPrompt(d.word,meaning,w.lang,d.allSenses?.[0]?.pos||'');
+  // show loading in detail
+  const sc=document.getElementById('screen');
+  if(sc){const btn=sc.querySelector('button[onclick*="enrichWord"]');if(btn){btn.textContent='生成中...';btn.disabled=true;}}
+  try{
+    const t=await callApi(prompt,1000);
+    const ai=JSON.parse(t.replace(/```json|```/g,'').trim());
+    if(ai.reading&&!d.reading)d.reading=ai.reading;
+    if(ai.gender)d.gender=ai.gender;
+    if(ai.examples?.length)d.examples=ai.examples;
+    if(ai.grammar)d.grammar=ai.grammar;
+    if(ai.related)d.related=ai.related;
+    if(ai.wordFamily?.length)d.wordFamily=ai.wordFamily;
+    if(ai.conjugations)d.conjugations=ai.conjugations;
+    if(ai.collocations?.length)d.collocations=ai.collocations;
+    d.aiEnriched=true;
+    saveWords();render();
+  }catch(e){alert('AI生成に失敗しました: '+e.message);}
+}
+
+// ── Practice ──
+function practiceH(){return`<div style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--tx)">練習</div><div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang}</div><div class="mode-tabs">${[['flash','🔁 フラッシュ'],['quiz','✍️ 選択問題']].map(([k,l])=>`<button class="mode-tab${S.pMode===k?' active':''}" onclick="S.pMode='${k}';resetP();render()">${l}</button>`).join('')}</div>${S.pMode==='flash'?flashH():quizH()}`;}
+
+function flashH(){
+  if(!S.fSess.length)return`<div class="empty-state">この言語の単語がありません<br>まず単語を追加しましょう</div>`;
+  if(S.fDone){const ok=S.fSess.filter(w=>w._ok).length;return`<div style="text-align:center;padding:36px 0"><div style="font-size:56px;margin-bottom:16px">🎉</div><div style="font-size:22px;font-weight:700;margin-bottom:8px;color:var(--tx)">完了！</div><div style="font-size:15px;color:var(--tx2);margin-bottom:24px">${ok}/${S.fSess.length}枚正解</div><button class="btn" onclick="resetP();render()">もう一度</button></div>`;}
+  const w=S.fSess[S.fIdx];const pct=Math.round(S.fIdx/S.fSess.length*100);
+  return`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:var(--tx2)">${S.fIdx+1}/${S.fSess.length}</span><span style="font-size:13px;color:var(--tx2)">${pct}%</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+    <div class="flash-card" onclick="S.fFlip=!S.fFlip;render()">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px">${tagH(w.lang)} ${lvH(w.data)}</div>
+      ${S.fFlip
+        ?`<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">意味・読み</div>
+           <div style="font-size:26px;font-weight:700;margin-bottom:8px;color:var(--tx)">${w.data.meaning}</div>
+           <div style="font-size:15px;color:${G};margin-bottom:12px">${w.data.reading||''}</div>
+           ${spkH(w.data.word,w.lang,'発音を聞く')}`
+        :`<div style="font-size:38px;font-weight:700;margin:12px 0 10px;color:var(--tx)">${w.data.word}</div>
+           <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>`}
+    </div>
+    ${S.fFlip?`<div class="flash-actions"><button class="btn-wrong" onclick="flashAns(false)">✗ もう一度</button><button class="btn-correct" onclick="flashAns(true)">✓ 覚えた！</button></div>`:''}`;
+}
+
+function quizH(){
+  const v=S.words.filter(w=>w.lang===S.lang&&w.data);
+  if(v.length<2)return`<div class="empty-state">単語を 2 つ以上追加してください</div>`;
+  const qs=v.map(w=>{const oth=v.filter(o=>o.id!==w.id).sort(()=>Math.random()-.5).slice(0,3);const opts=[{text:w.data.meaning,correct:true},...oth.map(o=>({text:o.data.meaning,correct:false}))].sort(()=>Math.random()-.5);return{...w,opts};});
+  const q=qs[S.qIdx%qs.length];
+  return`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:var(--tx2)">正解 ${S.qScore.c}/${S.qScore.t}</span>${tagH(q.lang)}</div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
+    <div style="background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">どういう意味ですか？</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        <span style="font-size:22px;font-weight:700;color:var(--tx)">${q.data.word}</span>${lvH(q.data)}${spkH(q.data.word,q.lang,'')}
+      </div>
+      <div style="font-size:14px;color:${G}">${q.data.reading||''}</div>
+    </div>
+    ${S.qFb?`<div class="quiz-fb ${S.qFb}">${S.qFb==='correct'?'✓ 正解！':'✗ 不正解'}</div>`:''}
+    ${q.opts.map((opt,i)=>{let cls='quiz-opt';if(S.qAns!==null){if(opt.correct)cls+=' correct';else if(i===S.qAns)cls+=' wrong';}return`<button class="${cls}" ${S.qAns!==null?'disabled':''} onclick="quizAns(${opt.correct?1:0},${i})">${opt.text}</button>`;}).join('')}`;
+}
+
+function quizAns(ok,i){if(S.qAns!==null)return;S.qAns=i;S.qScore={c:S.qScore.c+ok,t:S.qScore.t+1};S.qFb=ok?'correct':'wrong';render();clearTimeout(S.qTimer);S.qTimer=setTimeout(()=>{S.qIdx++;S.qAns=null;S.qFb=null;render();},900);}
+function flashAns(ok){S.fSess[S.fIdx]._ok=ok;if(ok){const w=S.words.find(x=>x.id===S.fSess[S.fIdx].id);if(w){w.reviewCount++;if(w.reviewCount>=5)w.mastered=true;saveWords();}}S.fIdx++;S.fFlip=false;if(S.fIdx>=S.fSess.length)S.fDone=true;render();}
+
+// ── Writing ──
+function fullscreenWritingH(topic){
+  const kws=topic.kw||[];
+  return`<div class="writing-fullscreen" id="wfScreen">
+    <div class="wf-header">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--tx)">${topic.title}</div>
+        <div style="font-size:12px;color:var(--tx2)">${topic.sub}</div>
+      </div>
+      <button onclick="S.wFullscreen=false;render()" style="padding:6px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;color:var(--tx2)">完了 ✓</button>
+    </div>
+    <div class="wf-body">
+      <div class="wf-kw">
+        <span style="font-size:11px;font-weight:700;color:#2E7D32;margin-right:6px;align-self:center">KW:</span>
+        ${kws.map(kw=>`<span class="kw-chip${S.wUsedKw.includes(kw)?' used':''}" onclick="insertKwFS('${kw.replace(/'/g,"\'")}')">${kw}</span>`).join('')}
+      </div>
+      <textarea id="wfInput" class="wf-textarea"
+        placeholder="ここに書いてください..."
+        oninput="S.wText=this.value"
+        autofocus>${S.wText||''}</textarea>
+      <div style="font-size:12px;color:var(--tx3);text-align:right">${S.wText.length}文字</div>
+    </div>
+    <div class="wf-footer">
+      ${S.wErr?`<div class="err-msg" style="margin-bottom:8px">${S.wErr}</div>`:''}
+      <button class="btn" onclick="doWritingFS()" ${S.wLoad||!S.wText.trim()?'disabled':''}>
+        ${S.wLoad?'<span class="loading-pulse">添削中...</span>':'AI に添削してもらう ✨'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function insertKwFS(kw){
+  const ta=document.getElementById('wfInput');
+  const cur=ta?ta.value:S.wText;
+  const ins=cur+(cur&&!cur.endsWith(' ')?' ':'')+kw+' ';
+  S.wText=ins;
+  if(!S.wUsedKw.includes(kw))S.wUsedKw=[...S.wUsedKw,kw];
+  if(ta){ta.value=ins;ta.focus();ta.selectionStart=ta.selectionEnd=ins.length;}
+  // update char count
+  const cc=document.querySelector('.wf-body div:last-child');
+  if(cc)cc.textContent=ins.length+'文字';
+}
+
+async function doWritingFS(){
+  S.wFullscreen=false;
+  await doWriting();
+}
+
+function writingH(){
+  if(S.wView==='history')return writingHistoryH();
+  if(S.wView==='histDetail')return writingHistDetailH();
+  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS['en'];
+  const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
+  const topic=topics[ti];
+  if(S.wView==='result'&&S.wResult)return writingResultH(topic);
+  const myEssays=S.wHistory.filter(e=>e.lang===S.lang);
+  return`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:22px;font-weight:700;color:var(--tx)">作文</div>
+      ${myEssays.length>0?`<button onclick="S.wView='history';render()" style="font-size:12px;padding:5px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2);font-weight:500">📚 履歴 ${myEssays.length}</button>`:''}
+    </div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="background:#FFF8E1;color:#E65100;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">⚡ AI使用</span>
+      <span style="font-size:12px;color:var(--tx3)">添削のみAPIを使用</span>
+      ${writingLimitBadgeH()}
+    </div>
+    <div class="w-topic">
+      <div style="font-size:10px;font-weight:700;color:#2E7D32;letter-spacing:.08em;margin-bottom:6px">TODAY'S THEME</div>
+      <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:3px">${topic.title}</div>
+      <div style="font-size:13px;color:#2E7D32;margin-bottom:10px">${topic.sub}</div>
+      <div style="font-size:12px;color:${N};margin-bottom:10px">💡 ${topic.hint}</div>
+      <div style="font-size:11px;font-weight:700;color:#2E7D32;letter-spacing:.05em;margin-bottom:8px">KEYWORDS</div>
+      <div>${topic.kw.map(kw=>`<span class="kw-chip${S.wUsedKw.includes(kw)?' used':''}" onclick="insertKw('${kw.replace(/'/g,"\\'")}')">${kw}</span>`).join('')}</div>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
+      ${topics.map((t,i)=>`<button onclick="S.wTopicIdx=${i};S.wText='';S.wUsedKw=[];S.wResult=null;render()" style="padding:5px 11px;font-size:12px;border:1px solid ${i===ti?G:'var(--bd)'};border-radius:20px;background:${i===ti?GL:'transparent'};color:${i===ti?GD:'var(--tx2)'};cursor:pointer;font-family:inherit">${t.title}</button>`).join('')}
+    </div>
+    ${S.wFullscreen?fullscreenWritingH(topic):`
+      <textarea id="wInput" class="textarea" placeholder="ここに書いてください..."
+        oninput="S.wText=this.value"
+        onfocus="S.wFullscreen=true;render()"
+        style="cursor:pointer;min-height:100px"
+        readonly>${S.wText||''}</textarea>
+      <div style="font-size:12px;color:var(--tx3);margin-top:4px;text-align:center">タップして全画面で入力 ↑</div>
+      ${S.wErr?`<div class="err-msg" style="margin-top:8px">${S.wErr}</div>`:''}
+      <button class="btn" style="margin-top:12px" onclick="doWriting()" ${S.wLoad||!S.wText.trim()?'disabled':''}>
+        ${S.wLoad?'<span class="loading-pulse">添削中...</span>':'AI に添削してもらう'}
+      </button>
+    `}`;
+}
+
+function writingLimitBadgeH(){
+  const n=revisionCountToday();
+  if(n>=3)return'<span style="font-size:11px;padding:2px 9px;border-radius:10px;font-weight:600;background:#FFEBEE;color:#B71C1C">今日の添削上限 3/3</span>';
+  if(n===0)return'<span style="font-size:11px;padding:2px 9px;border-radius:10px;font-weight:600;background:#E8F5E9;color:#2E7D32">今日の添削：0/3回</span>';
+  return'<span style="font-size:11px;padding:2px 9px;border-radius:10px;font-weight:600;background:#FFF8E1;color:#E65100">今日の添削：'+n+'/3回</span>';
+}
+
+function insertKw(kw){
+  const ta=document.getElementById('wInput');
+  const cur=ta?ta.value:S.wText;
+  const ins=cur+(cur&&!cur.endsWith(' ')?' ':'')+kw+' ';
+  S.wText=ins;
+  if(!S.wUsedKw.includes(kw))S.wUsedKw=[...S.wUsedKw,kw];
+  render();
+  setTimeout(()=>{const t=document.getElementById('wInput')||document.getElementById('wfInput');if(t){t.value=ins;t.focus();t.selectionStart=t.selectionEnd=ins.length;}},30);
+}
+
+function writingResultH(topic){
+  const r=S.wResult;
+  return`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:22px;font-weight:700;color:var(--tx)">添削結果</div>
+      <button onclick="S.wView='history';render()" style="font-size:12px;padding:5px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2);font-weight:500">📚 履歴</button>
+    </div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${topic.title}</div>
+    ${r.score?`<div class="score-badge">総合評価 ${r.score}/10 ${r.score>=8?'🌟':r.score>=6?'👍':'💪'}</div>`:''}
+    ${r.corrected?`<div class="c-ok"><div class="c-lbl">✓ 修正後の文章</div><div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:12px">${r.corrected}</div><button class="spk-lg" onclick="speak('${r.corrected.replace(/\n/g,' ').replace(/'/g,"\\'")}','${S.lang}')">▶ 読み上げ</button></div>`:''}
+    ${(r.errors||[]).length?`<div class="sec-lbl">修正点</div>${r.errors.map(e=>`<div class="c-fix"><div class="c-lbl">⚠ ${e.type||'修正'}</div><div style="font-size:14px;color:var(--tx)"><span style="text-decoration:line-through;color:var(--tx3)">${e.original}</span> → <strong>${e.fixed}</strong></div><div style="font-size:12px;color:var(--tx2);margin-top:4px">${e.note}</div></div>`).join('')}`:''}
+    ${r.praise?`<div class="c-ok"><div class="c-lbl">良い点</div><div style="font-size:14px;color:var(--tx)">${r.praise}</div></div>`:''}
+    <button class="btn-ghost" style="margin-top:14px" onclick="S.wView='write';S.wResult=null;S.wText='';S.wUsedKw=[];render()">もう一度書く（修正）</button>`;
+}
+
+async function doWriting(){
+  const txt=document.getElementById('wInput')?.value||S.wText;
+  S.wText=txt;if(!txt.trim())return;
+
+  // ── 毎日制限チェック ──
+  const todayCount=revisionCountToday();
+  if(todayCount>=1&&!S.wCurrentEssayId){
+    // 今日すでに別の作文を書いた
+    S.wErr='📅 今日はすでに1篇作文を書きました。明日（'+tomorrowStr()+'）また書いてみよう！';
+    render();return;
+  }
+  if(todayCount>=3||(S.wCurrentRevCount!=null&&S.wCurrentRevCount>=3)){
+    // 今日の修正が3回に達した
+    S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね 😊';
+    render();return;
+  }
+
+  S.wLoad=true;S.wErr='';render();
+  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS['en'];
+  const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
+  const topic=topics[ti];
+  const langName={'fr':'法语','ja':'日语','en':'英语'}[S.lang]||'英语';
+  try{
+    const t=await callApi('你是专业'+langName+'教师。请对以下'+langName+'作文进行详细添削。主题：「'+topic.title+'」\n\n'+txt.trim()+'\n\n返回JSON（不要markdown）：{"score":1-10,"corrected":"修正后完整文章","errors":[{"type":"错误类型","original":"原文片段","fixed":"正确写法","note":"简短说明"}],"praise":"做得好的地方"}');
+    S.wResult=JSON.parse(t.replace(/```json|```/g,'').trim());
+    // 修正回数カウント
+    if(S.wCurrentRevCount==null)S.wCurrentRevCount=0;
+    S.wCurrentRevCount++;
+    const essayId=S.wCurrentEssayId||Date.now().toString();
+    S.wCurrentEssayId=essayId;
+    S.wHistory=[{id:Date.now().toString(),lang:S.lang,topic:topic.title,
+      original:txt.trim(),result:S.wResult,score:S.wResult.score||null,
+      date:Date.now(),essayId,revNum:S.wCurrentRevCount},...S.wHistory];
+    saveEssays();
+    S.wView='result';
+  }catch(e){S.wErr='添削に失敗しました（'+e.message+'）';}
+  S.wLoad=false;render();
+}
+
+// ── Writing history ──
+function writingHistoryH(){
+  const essays=S.wHistory.filter(e=>e.lang===S.lang).sort((a,b)=>b.date-a.date);
+  return`
+    <button class="btn-back" onclick="S.wView='write';render()">← 戻る</button>
+    <div style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--tx)">作文履歴</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang} · ${essays.length}件</div>
+    ${essays.length===0?'<div class="empty-state">まだ作文がありません<br>「作文」タブから書いてみましょう！</div>':''}
+    ${essays.map(e=>`<div class="word-card" onclick="S.wHistSel='${e.id}';S.wView='histDetail';render()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:700;color:var(--tx)">${e.topic}</div>
+        ${e.score?`<span style="background:#E8F5E9;color:#2E7D32;font-size:12px;padding:2px 10px;border-radius:20px;font-weight:700">${e.score}/10 ${e.score>=8?'🌟':e.score>=6?'👍':'💪'}</span>`:''}
+      </div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${e.original}</div>
+      <div style="font-size:11px;color:var(--tx3)">${new Date(e.date).toLocaleDateString('ja-JP',{year:'numeric',month:'short',day:'numeric'})}</div>
+    </div>`).join('')}`;
+}
+
+function writingHistDetailH(){
+  const e=S.wHistory.find(x=>x.id===S.wHistSel);
+  if(!e)return`<button class="btn-back" onclick="S.wView='history';render()">← 戻る</button>`;
+  const r=e.result;
+  return`
+    <button class="btn-back" onclick="S.wView='history';render()">← 戻る</button>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;gap:8px">
+      <div style="font-size:20px;font-weight:700;color:var(--tx)">${e.topic}</div>
+      <button onclick="deleteEssay('${e.id}')" style="font-size:12px;padding:4px 10px;border:1px solid #FFCDD2;border-radius:20px;background:transparent;cursor:pointer;color:#E53935;font-family:inherit;flex-shrink:0">削除</button>
+    </div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:16px">${new Date(e.date).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'})}</div>
+    <div class="sec-lbl">元の作文</div>
+    <div class="info-blk" style="line-height:1.8;white-space:pre-wrap">${e.original}</div>
+    ${r?`${r.score?`<div class="score-badge">総合評価 ${r.score}/10 ${r.score>=8?'🌟':r.score>=6?'👍':'💪'}</div>`:''}
+    ${r.corrected?`<div class="c-ok"><div class="c-lbl">✓ 修正後の文章</div><div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:12px;white-space:pre-wrap">${r.corrected}</div><button class="spk-lg" onclick="speak('${r.corrected.replace(/\n/g,' ').replace(/'/g,"\\'")}','${e.lang}')">▶ 読み上げ</button></div>`:''}
+    ${(r.errors||[]).length?`<div class="sec-lbl">修正点</div>${r.errors.map(err=>`<div class="c-fix"><div class="c-lbl">⚠ ${err.type||'修正'}</div><div style="font-size:14px;color:var(--tx)"><span style="text-decoration:line-through;color:var(--tx3)">${err.original}</span> → <strong>${err.fixed}</strong></div><div style="font-size:12px;color:var(--tx2);margin-top:4px">${err.note}</div></div>`).join('')}`:''}
+    ${r.praise?`<div class="c-ok"><div class="c-lbl">良い点</div><div style="font-size:14px;color:var(--tx)">${r.praise}</div></div>`:''}`:''}`;
+}
+
+function deleteEssay(id){
+  if(!confirm('この作文を削除しますか？'))return;
+  S.wHistory=S.wHistory.filter(e=>e.id!==id);
+  saveEssays();S.wView='history';render();
+}
+
+// ── Import ──
+function importH(){
+  const existing=importedSet();
+  const pending=IMPORT_LIST.filter(i=>i.lang===S.lang&&!existing.has(i.word.toLowerCase()));
+  if(S.impDone&&pending.length===0)return`<div style="text-align:center;padding:36px 0"><div style="font-size:56px;margin-bottom:12px">🎉</div><div style="font-size:22px;font-weight:700;margin-bottom:8px;color:var(--tx)">インポート完了！</div><button class="btn" onclick="S.impDone=false;switchTab('words')">単語帳を見る</button></div>`;
+  const allForLang=IMPORT_LIST.filter(i=>i.lang===S.lang);
+  return`<div style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--tx)">一括インポート</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang}</div>
+    <div style="font-size:12px;margin-bottom:14px;display:flex;align-items:center;gap:5px">
+      <span style="background:${GL};color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">📖 無料</span>
+      辞書API使用・AI不要
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <div style="flex:1;background:#E8F5E9;border-radius:12px;padding:14px;text-align:center"><div style="font-size:24px;font-weight:700;color:#2E7D32">${pending.length}</div><div style="font-size:11px;color:#2E7D32;margin-top:2px">追加予定</div></div>
+      <div style="flex:1;background:var(--bg2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:24px;font-weight:700;color:var(--tx2)">${allForLang.length-pending.length}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">インポート済み ✓</div></div>
+    </div>
+    ${pending.length===0?`<div class="info-blk" style="text-align:center">✓ 全語インポート済みです</div>`:`
+      <div class="prog-bar" style="height:5px;margin-bottom:8px"><div class="prog-fill" id="impPf" style="width:0%"></div></div>
+      <div id="impSt" style="font-size:13px;color:var(--tx2);text-align:center;margin-bottom:12px">ボタンを押して開始</div>
+      <div id="impList" style="max-height:300px;overflow-y:auto;margin-bottom:14px">
+        ${allForLang.map((item,i)=>{const done=existing.has(item.word.toLowerCase());return`<div class="import-row ${done?'skip':'pending'}" id="ir${i}"><span class="tag tag-${item.lang}">${item.lang.toUpperCase()}</span><span style="font-weight:600;flex:1;color:var(--tx)">${item.word}</span><span id="ist${i}" style="font-size:15px;width:18px;text-align:center">${done?'✓':'○'}</span></div>`;}).join('')}
+      </div>
+      <button class="btn" id="impBtn" onclick="startImport()" ${S.impRunning?'disabled':''}>${S.impRunning?'<span class="loading-pulse">検索中...</span>':'🔍 辞書から一括取得'}</button>`}`;
+}
+
+async function startImport(){
+  if(S.impRunning)return;S.impRunning=true;render();
+  const existing=importedSet();
+  const allForLang=IMPORT_LIST.filter(i=>i.lang===S.lang);
+  const pending=allForLang.filter(i=>!existing.has(i.word.toLowerCase()));
+  let done=0;
+  for(let i=0;i<allForLang.length;i++){
+    const item=allForLang[i];
+    const rowEl=document.getElementById('ir'+i),stEl=document.getElementById('ist'+i);
+    const pfEl=document.getElementById('impPf'),stTxt=document.getElementById('impSt');
+    if(existing.has(item.word.toLowerCase())){done++;continue;}
+    if(rowEl)rowEl.className='import-row active';if(stEl)stEl.textContent='⏳';
+    if(stTxt)stTxt.textContent=(done+1)+'/'+pending.length+' 検索中: '+item.word;
+    try{
+      const result=item.lang==='ja'?await lookupJa(item.word):await lookupFrEn(item.word,item.lang);
+      const nw={id:Date.now().toString()+i,word:item.word,lang:item.lang,
+        data:{word:result.word,reading:result.reading||'',meaning:result.allSenses?.[0]?.text||result.meanings||'',
+          delf:item.lang==='fr'?(result.delf||null):null,jlpt:item.lang==='ja'?(result.jlpt||null):null,
+          gender:null,pluralNote:null,examples:[],grammar:'',related:'',wordFamily:[],conjugations:null,collocations:[],
+          source:result.source,allSenses:result.allSenses||[]},
+        reviewCount:0,mastered:false,addedAt:Date.now()-i*1000};
+      S.words=[nw,...S.words];saveWords();existing.add(item.word.toLowerCase());
+      if(rowEl)rowEl.className='import-row done';if(stEl)stEl.textContent='✓';
+    }catch(e){if(rowEl)rowEl.className='import-row err';if(stEl)stEl.textContent='✗';}
+    done++;if(pfEl)pfEl.style.width=Math.round(done/pending.length*100)+'%';
+    await new Promise(r=>setTimeout(r,300));
+  }
+  S.impRunning=false;S.impDone=true;celebrate();celebrate();render();
+}
+
+// ── Stats ──
+function ebiH(){
+  const sc={};S.words.filter(w=>w.lang===S.lang).forEach(w=>{EBI.forEach(d=>{const dt=new Date(w.addedAt+d*86400000);dt.setHours(0,0,0,0);const k=dt.getTime();sc[k]=(sc[k]||0)+1;});});
+  const today=new Date();today.setHours(0,0,0,0);
+  const cells=[];for(let i=0;i<14;i++){const d=new Date(today.getTime()+i*86400000);const k=d.getTime(),count=sc[k]||0,isToday=i===0;cells.push({d,count,isToday,cls:isToday?'ebi-today':count===0?'ebi-none':count<=2?'ebi-light':count<=4?'ebi-med':'ebi-heavy'});}
+  const total=cells.reduce((s,c)=>s+c.count,0);
+  return`<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><div><div style="font-size:14px;font-weight:600;color:var(--tx)">復習スケジュール</div><div style="font-size:12px;color:var(--tx2);margin-top:2px">1・3・7・14日後</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--tx3)">2週間合計</div><div style="font-size:22px;font-weight:700;color:${G}">${total}</div></div></div><div class="ebi-cal">${['日','月','火','水','木','金','土'].map(n=>`<div style="font-size:10px;color:var(--tx3);text-align:center;padding:2px 0">${n}</div>`).join('')}${Array(new Date(today).getDay()).fill(0).map(()=>'<div></div>').join('')}${cells.map(c=>`<div class="ebi-day ${c.cls}"><div>${c.d.getDate()}</div>${c.count>0?`<span style="font-size:12px;font-weight:700;display:block;margin-top:1px">${c.count}</span>`:''}</div>`).join('')}</div></div>`;}
+
+function statsH(){
+  const ws=S.words.filter(w=>w.lang===S.lang);
+  const tot=ws.length,mas=ws.filter(w=>w.mastered).length;
+  const today=new Date().getDay();
+  const days=['日','月','火','水','木','金','土'];
+  const lv={};ws.filter(w=>w.data).forEach(w=>{const k=w.data.jlpt||w.data.delf;if(k)lv[k]=(lv[k]||0)+1;});
+  return`<div style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--tx)">統計</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">${LANG_INFO[S.lang]?.flag||''} ${LANG_INFO[S.lang]?.label||S.lang}</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-lbl">収集済み単語</div><div class="stat-val">${tot}</div></div>
+      <div class="stat-card"><div class="stat-lbl">習得済み</div><div class="stat-val">${mas}</div></div>
+    </div>
+    <div class="sec-lbl">今週の学習</div>
+    <div class="week-dots">${days.map((d,i)=>{const done=today===0?i<=6:i<today;return`<div class="day-dot ${done?'day-done':'day-todo'}">${d}</div>`;}).join('')}</div>
+    ${Object.keys(lv).length?`<div class="sec-lbl">レベル分布</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">${Object.entries(lv).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#eee'};color:${LV_FG[k]||'#333'}">${k}: ${n}語</span>`).join('')}</div>`:''}
+    ${ebiH()}
+    <div class="sec-lbl">言語設定</div>
+    ${Object.entries(LANG_INFO).map(([code,info])=>`
+      <div class="lang-card${S.enabledLangs[code]?' active':''}" onclick="toggleLang('${code}')">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">${info.flag}</span>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--tx)">${info.label}</div>
+            <div style="font-size:12px;color:var(--tx3)">辞書: ${info.dictName}</div>
+          </div>
+        </div>
+        <div class="toggle-switch${S.enabledLangs[code]?' on':''}"></div>
+      </div>`).join('')}`;
+}
+
+function toggleLang(code){
+  const active=activeLangs();
+  if(S.enabledLangs[code]&&active.length<=1){alert('最低1つの言語は必要です');return;}
+  S.enabledLangs[code]=!S.enabledLangs[code];
+  saveSettings();
+  if(!S.enabledLangs[S.lang]){S.lang=activeLangs()[0];}
+  showApp();
+}
+
+// ── Language setup screen (初回のみ) ──
+function setupH(){
+  const anyEnabled=Object.values(S.enabledLangs).some(v=>v);
+  return`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 28px;background:var(--bg)">
+      <div style="margin-bottom:28px">${logoFull()}</div>
+      <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:8px;text-align:center">学習する言語を選んでください</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:28px;text-align:center">複数選択できます。後から変更も可能。</div>
+      ${Object.entries(LANG_INFO).map(([code,info])=>`
+        <div class="lang-card${S.enabledLangs[code]?' active':''}"
+          style="width:100%;max-width:320px;margin-bottom:10px"
+          onclick="toggleSetupLang('${code}')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:32px">${info.flag}</span>
+            <div>
+              <div style="font-size:16px;font-weight:600;color:var(--tx)">${info.label}</div>
+              <div style="font-size:12px;color:var(--tx3)">無料辞書対応</div>
+            </div>
+          </div>
+          <div class="toggle-switch${S.enabledLangs[code]?' on':''}"></div>
+        </div>`).join('')}
+      ${!anyEnabled?`<div style="font-size:13px;color:#E53935;margin-bottom:8px">最低1つ選んでください</div>`:''}
+      <button class="btn" style="margin-top:14px;max-width:320px;width:100%" onclick="finishSetup()" ${!anyEnabled?'disabled':''}>はじめる →</button>
+    </div>`;
+}
+
+function toggleSetupLang(code){
+  // 最後の1つはオフにできない
+  const active=Object.entries(S.enabledLangs).filter(([,v])=>v);
+  if(S.enabledLangs[code]&&active.length<=1)return; // 無効化不可
+  S.enabledLangs[code]=!S.enabledLangs[code];
+  // setupHを再描画
+  document.getElementById('root').innerHTML=setupH();
+}
+
+function finishSetup(){
+  const active=activeLangs();
+  if(!active.length){alert('最低1つ選んでください');return;}
+  S.lang=active[0];
+  saveSettings();
+  lsSet('lingua-setup-done-'+U.sk,'1');
+  showApp();
+}
+
+// ── Login ──
+function showLogin(){
+  document.getElementById('root').innerHTML=`
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 28px;background:var(--bg)">
+    <div style="margin-bottom:28px">${logoFull()}</div>
+    <div style="font-size:15px;color:var(--tx2);margin-bottom:32px;text-align:center;line-height:1.7">メールアドレスで<br>あなた専用の単語帳を作ろう</div>
+    <input id="loginEmail" class="inp" type="email" placeholder="your@email.com" style="margin-bottom:10px;max-width:320px;width:100%">
+    <div id="loginErr" style="font-size:13px;color:#B71C1C;min-height:16px;margin-bottom:12px"></div>
+    <button class="btn" style="max-width:320px" onclick="doLogin()">ログイン / 新規作成</button>
+    <div style="font-size:12px;color:var(--tx3);margin-top:18px;text-align:center">パスワード不要。このデバイスにのみ保存。</div>
+  </div>`;
+  document.getElementById('loginEmail')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+}
+
+function doLogin(){
+  const email=(document.getElementById('loginEmail')?.value||'').trim().toLowerCase();
+  const err=document.getElementById('loginErr');
+  if(!email||!/^[^@]+@[^@]+\.[^@]+$/.test(email)){if(err)err.textContent='有効なメールを入力してください';return;}
+  U={email,sk:btoa(email).replace(/[^a-zA-Z0-9]/g,'').slice(0,24)};
+  saveAuth();loadAll();
+  // 初回セットアップ
+  if(!ls('lingua-setup-done-'+U.sk)){document.getElementById('root').innerHTML=setupH();return;}
+  showApp();
+}
+
+function loadAuth(){
+  const r=ls('lingua-auth-v3');
+  if(r){try{U=JSON.parse(r);loadAll();if(!ls('lingua-setup-done-'+U.sk)){document.getElementById('root').innerHTML=setupH();return;}showApp();}catch(e){showLogin();}}
+  else showLogin();
+}
+
+function doLogout(){lsDel('lingua-auth-v3');U={email:'',sk:''};S.words=[];S.wHistory=[];showLogin();}
+
+function showApp(){
+  const langs=activeLangs();
+  if(!S.enabledLangs[S.lang]&&langs.length)S.lang=langs[0];
+  const initials=U.email.slice(0,2).toUpperCase();
+  document.getElementById('root').innerHTML=`
+  <div style="display:flex;flex-direction:column;min-height:100vh">
+    <div class="top-bar">
+      <div>${logoSmall()}</div>
+      <div class="lang-toggle">
+        ${langs.map(l=>`<button class="lang-btn${S.lang===l?' active':''}" data-lang="${l}" onclick="setLang('${l}')">${LANG_INFO[l].flag} ${LANG_INFO[l].label.slice(0,2)}</button>`).join('')}
+      </div>
+      <div class="user-pill" style="flex:none;max-width:110px">
+        <div class="user-av">${initials}</div>
+        <span class="user-em">${U.email}</span>
+        <button class="logout-x" onclick="doLogout()">×</button>
+      </div>
+    </div>
+    <div class="screen" id="screen"></div>
+    <nav class="navbar">
+      <div class="nav-item active" data-tab="words" onclick="switchTab('words')"><span class="nav-icon">📖</span>単語帳</div>
+      <div class="nav-item" data-tab="practice" onclick="switchTab('practice')"><span class="nav-icon">✍️</span>練習</div>
+      <div class="nav-item" data-tab="writing" onclick="switchTab('writing')"><span class="nav-icon">🖊️</span>作文</div>
+      <div class="nav-item" data-tab="stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>統計</div>
+    </nav>
+  </div>`;
+  render();
+}
+
+function render(){
+  const sc=document.getElementById('screen');if(!sc)return;
+  if(S.tab==='words'){
+    if(S.view==='list')sc.innerHTML=wordsListH();
+    else if(S.view==='detail')sc.innerHTML=detailH();
+    else if(S.view==='add')sc.innerHTML=addH();
+  }else if(S.tab==='practice')sc.innerHTML=practiceH();
+  else if(S.tab==='writing')sc.innerHTML=writingH();
+  else if(S.tab==='import')sc.innerHTML=importH();
+  else sc.innerHTML=statsH();
+}
+function setView(v){S.view=v;if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addAiLoading=false;}render();}
+function selWord(id){S.sel=S.words.find(w=>w.id===id);S.view='detail';render();}
+function goPractice(){S.tab='practice';S.pMode='flash';resetP();render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='practice'));}
+
+loadAuth();
+</script>
+</body>
+</html>
