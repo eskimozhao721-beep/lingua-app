@@ -460,32 +460,23 @@ const setupKey=()=>'lingua-setup-'+U.sk;
 
 // ── Load / Save ──
 function migrateData(){
-  // 旧バージョンのauth keyから移行
-  const oldAuthKeys=['lingua-auth-v3','lingua-auth-v2','lingua-auth'];
-  for(const oldKey of oldAuthKeys){
+  // すべての旧バージョンのkeyから 'lingua-auth'（固定）に移行
+  // auth keyは今後永久に 'lingua-auth' で固定 — バージョン番号なし
+  const AUTH_KEY='lingua-auth';
+  if(ls(AUTH_KEY))return; // 既に最新keyにデータあり → 不要
+  const oldKeys=['lingua-auth','lingua-auth-v3','lingua-auth-v2'];
+  for(const oldKey of oldKeys){
     const r=ls(oldKey);
     if(!r)continue;
     try{
       const oldU=JSON.parse(r);
       if(!oldU.email||!oldU.sk)continue;
-      // 現在のkeyにデータがなければ移行
-      const newAuthExists=ls('lingua-auth-v4');
-      if(!newAuthExists){
-        lsSet('lingua-auth-v4',r);
-        // words migrate
-        const oldWords=ls('lingua-words-'+oldU.sk);
-        if(oldWords&&!ls('lingua-words-'+oldU.sk))lsSet('lingua-words-'+oldU.sk,oldWords);
-        // essays migrate
-        const oldEssays=ls('lingua-essays-'+oldU.sk);
-        if(oldEssays&&!ls('lingua-essays-'+oldU.sk))lsSet('lingua-essays-'+oldU.sk,oldEssays);
-        // settings migrate
-        const oldSettings=ls('lingua-settings-'+oldU.sk);
-        if(oldSettings&&!ls('lingua-settings-'+oldU.sk))lsSet('lingua-settings-'+oldU.sk,oldSettings);
-        // setup flag migrate
-        const oldSetup=ls('lingua-setup-done-'+oldU.sk)||ls('lingua-setup-'+oldU.sk);
-        if(oldSetup)lsSet('lingua-setup-'+oldU.sk,'1');
-        console.log('Migrated from',oldKey);
-      }
+      lsSet(AUTH_KEY,r);
+      // setup flag
+      const oldSetup=ls('lingua-setup-done-'+oldU.sk)||ls('lingua-setup-'+oldU.sk);
+      if(oldSetup)lsSet('lingua-setup-'+oldU.sk,'1');
+      console.log('Migrated from',oldKey,'→',AUTH_KEY);
+      break;
     }catch{}
   }
 }
@@ -503,7 +494,7 @@ function loadAll(){
 const saveWords=()=>lsSet(wKey(),JSON.stringify(S.words));
 const saveEssays=()=>lsSet(eKey(),JSON.stringify(S.wHistory));
 const saveSettings=()=>lsSet(stKey(),JSON.stringify({enabledLangs:S.enabledLangs}));
-const saveAuth=()=>lsSet('lingua-auth-v4',JSON.stringify(U));
+const saveAuth=()=>lsSet('lingua-auth',JSON.stringify(U));
 
 // ── Daily limit helpers ──
 const todayStr=()=>new Date().toISOString().slice(0,10);
@@ -1255,22 +1246,23 @@ function resetP(){
 function resetPFull(){S.pStopToday=false;resetP();}
 function practiceH(){
   if(S.pStopToday){
-    return '<div style="text-align:center;padding:60px 20px"><div style="font-size:60px;margin-bottom:16px">🌙</div>'
+    return '<div style="text-align:center;padding:60px 20px">'
+      +'<div style="font-size:60px;margin-bottom:16px">🌙</div>'
       +'<div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>'
       +'<div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>'
       +'<button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button></div>';
   }
   const modes=[['flash','🔁 フラッシュ'],['quiz_meaning','📖 意味選択'],['quiz_word','✍️ 単語選択'],['quiz_reading','🔊 発音→単語']];
-  let h='';
-  h+='<div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>';
+  let h='<div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>';
   h+='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">'+(LANG[S.lang]?.flag||'')+' '+(LANG[S.lang]?.label||S.lang)+'</div>';
-  h+='<div id="practiceTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">';
   for(const [k,l] of modes){
     const a=S.pMode===k;
-    const bg=a?N:'var(--bg)';
-    const bd=a?G:'var(--bd)';
-    const cl=a?'#fff':'var(--tx2)';
-    h+='<button data-mode="'+k+'" class="ptab" style="padding:8px 14px;font-size:13px;border:1.5px solid '+bd+';border-radius:var(--r-full);background:'+bg+';color:'+cl+';cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;touch-action:manipulation;">'+l+'</button>';
+    h+='<button onclick="setPMode(\'' +k+ '\')" style="padding:8px 14px;font-size:13px;'
+      +'border:1.5px solid '+(a?G:'var(--bd)')
+      +';border-radius:999px;background:'+(a?N:'var(--bg)')
+      +';color:'+(a?'#fff':'var(--tx2)')
+      +';font-weight:600;white-space:nowrap;touch-action:manipulation;cursor:pointer;font-family:inherit;">'+l+'</button>';
   }
   h+='</div>';
   h+=S.pMode==='flash'?flashH():quizH(S.pMode);
@@ -1298,10 +1290,10 @@ function flashH(){
       <div style="font-size:36px;font-weight:800;color:${G};margin-bottom:24px">${pct}%</div>
       <div style="background:var(--bg2);border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid var(--bd)">
         <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">続けますか？</div>
-        <div style="display:flex;gap:10px">
-          <button class="btn-ghost" style="flex:1" onclick="S.pStopToday=true;render()">今日はここまで</button>
+        <div style="display:flex;gap:10px;margin-bottom:8px">
           <button class="btn" style="flex:1" onclick="resetP();render()">もう一周 🔄</button>
         </div>
+        <button class="btn-ghost" style="width:100%" onclick="S.pStopToday=true;render()">今日はここまで 🌙</button>
       </div>
     </div>`;
   }
@@ -1314,8 +1306,8 @@ function flashH(){
       <span style="font-size:13px;color:var(--tx2);font-weight:500">${S.fIdx+1}/${S.fSess.length}</span>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--tx3)">${pct}%</span>
-        <button onclick="S.fSentenceMode=!S.fSentenceMode;S.fSentenceResult=null;S.fSentenceInput='';S.fSentenceErr='';render()"
-          style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid ${S.fSentenceMode?G:'var(--bd)'};background:${S.fSentenceMode?GL:'transparent'};color:${S.fSentenceMode?GD:'var(--tx3)'};cursor:pointer;font-family:inherit;font-weight:600">
+        <button onclick="toggleSentenceMode()"
+          style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid ${S.fSentenceMode?G:'var(--bd)'};background:${S.fSentenceMode?GL:'transparent'};color:${S.fSentenceMode?GD:'var(--tx3)'};cursor:pointer;font-family:inherit;font-weight:600;touch-action:manipulation;">
           ✏️ 造句${S.fSentenceMode?' ON':''}
         </button>
       </div>
@@ -1488,6 +1480,10 @@ function quizH(mode='quiz_meaning'){
       return`<button class="${cls}" ${S.qAns!==null?'disabled':''} onclick="quizAns(${opt.correct?1:0},${i},'${opt.text.replace(/'/g,"\'")}')"><span>${opt.text}</span>${detailLink}</button>`;
     }).join('')}`;
 }
+
+// ── 練習タブ切り替え（グローバル関数）──
+function setPMode(k){S.pMode=k;S.fSentenceMode=false;resetP();render();}
+function toggleSentenceMode(){S.fSentenceMode=!S.fSentenceMode;S.fSentenceResult=null;S.fSentenceInput='';S.fSentenceErr='';render();}
 
 function goToWordDetail(wordId){
   if(!wordId)return;
@@ -1960,14 +1956,14 @@ function doLogin(){
 
 function loadAuth(){
   migrateData();
-  const r=ls('lingua-auth-v4');
+  const r=ls('lingua-auth');
   if(r){
     try{U=JSON.parse(r);loadAll();if(!ls(setupKey())){document.getElementById('root').innerHTML=setupH();return;}showApp();}
     catch{showLogin();}
   }else showLogin();
 }
 
-function doLogout(){lsDel('lingua-auth-v4');U={email:'',sk:''};S.words=[];S.wHistory=[];showLogin();}
+function doLogout(){lsDel('lingua-auth');U={email:'',sk:''};S.words=[];S.wHistory=[];showLogin();}
 
 // ════════════════════════
 // 🏠 APP SHELL
@@ -2014,13 +2010,7 @@ function showApp(){
       </nav>
     </div>`;
   render();
-  // Practice tab delegation
-  document.addEventListener('click',function(e){
-    const btn=e.target.closest('[data-mode]');
-    if(btn&&btn.classList.contains('ptab')){
-      S.pMode=btn.dataset.mode;S.fSentenceMode=false;resetP();render();
-    }
-  },{capture:false});
+
 }
 
 function render(){
