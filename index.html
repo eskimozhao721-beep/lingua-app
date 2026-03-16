@@ -54,8 +54,9 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .screen{flex:1;overflow-y:auto;padding:20px 16px 20px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
 
 /* ── Navbar ── */
-.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:30;padding-bottom:env(safe-area-inset-bottom,0px);}
-.nav-item{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;font-size:10px;color:var(--tx3);transition:color .18s;font-weight:500;}
+.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:30;}
+.nav-item{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
+.nav-item{flex:1;text-align:center;padding:10px 0;cursor:pointer;font-size:10px;color:var(--tx3);transition:color .18s;font-weight:500;}
 .nav-item.active{color:var(--g);}
 .nav-icon{font-size:20px;display:block;margin-bottom:2px;transition:transform .2s;}
 .nav-item.active .nav-icon{transform:scale(1.15);}
@@ -233,7 +234,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 @keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-100px) scale(1.5)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.celebrate{position:fixed;top:50%;left:50%;pointer-events:none;font-size:40px;animation:floatUp 1.3s ease-out forwards;z-index:999;}
+.celebrate{position:fixed;pointer-events:none;font-size:36px;animation:floatUp 1.3s ease-out forwards;z-index:999;transform:translate(-50%,-50%);}
 .slide-up{animation:slideUp .25s ease-out;}
 
 /* ── Scrollbar ── */
@@ -301,6 +302,106 @@ function isAdmin(email){
 }
 
 
+// 難易度別トピック
+const WRITING_TOPICS_BY_LEVEL={
+  fr:{
+    A1:[
+      {title:'Ma famille',sub:'介绍你的家人',hint:'用il/elle + être/avoir',kw:['père','mère','frère','soeur','grand-père','il est','elle a','famille']},
+      {title:'Mon animal préféré',sub:'介绍你喜欢的动物',hint:'用简单形容词',kw:['chat','chien','grand','petit','mignon','il est','jaime','animal']},
+      {title:'Ma maison',sub:'描述你的家',hint:'用il y a / dans',kw:["il y a",'chambre','cuisine','salon','jardin','grand','petit','dans']},
+      {title:'Les couleurs',sub:'描述你喜欢的颜色',hint:'颜色形容词',kw:['rouge','bleu','vert','jaune','blanc','noir','aimer','beau']},
+      {title:'Mon repas',sub:'介绍你最喜欢的食物',hint:'用je mange / je bois',kw:['je mange','je bois','délicieux','pain','eau','matin','midi','soir']}
+    ],
+    A2:[
+      {title:'Mon weekend',sub:'描述你的周末',hint:'用passé composé基础',kw:["jʼai","je suis allé","on a","avec","samedi","dimanche","amusant","fatigué"]},
+      {title:'Ma ville',sub:'介绍你所在的城市',hint:'用il y a / on peut',kw:["il y a","on peut","musée","restaurant","parc","grand","moderne","habiter"]},
+      {title:'Mon ami(e)',sub:'描述你的一个朋友',hint:'描述外貌和性格',kw:["il/elle est","grand","sympa","cheveux","toujours","ensemble","depuis","aimer"]},
+      {title:'Les saisons',sub:'你最喜欢的季节',hint:'用en + 季节',kw:["en été","en hiver","il fait","chaud","froid","jʼaime","parce que","souvent"]},
+      {title:'Mon travail',sub:'你做什么工作/学什么',hint:'用je travaille / j étudie',kw:["je travaille","jʼétudie","tous les jours","bureau","école","important","difficile","apprendre"]}
+    ],
+    B1:[
+      {title:'Ma journée idéale',sub:'描述你理想中的一天',hint:'时间顺序，混用时态',kw:['se lever','matin','déjeuner','se promener','soir','tranquille','parfait','enfin']},
+      {title:'Mon repas préféré',sub:'介绍你最喜欢的食物',hint:'食材和味道，用imparfait回忆',kw:['délicieux','ingrédient','cuisiner','goût','saveur','recette','famille','souvenir']},
+      {title:'Mon weekend passé',sub:'回顾上个周末',hint:'复合过去时+半过去时',kw:["jʼai visité",'on a mangé','il faisait beau','ensemble','fatiguant','sympa','enfin','pourtant']},
+      {title:'La ville où je vis',sub:'描述你所在的城市',hint:'对比表达，用d un côté / de l autre',kw:['quartier','animé','calme','transports','parc','habitant','moderne','inconvénient']},
+      {title:"Mes projets pour lʼété",sub:'分享夏日计划',hint:'将来时+条件式',kw:['je vais','partir','plage','vacances','si possible',"jʼespère",'cette année','profiter']}
+    ],
+    B2:[
+      {title:'Les réseaux sociaux',sub:'社交媒体的利与弊',hint:'论证结构，用certes...mais/bien que',kw:['certes','cependant','permettent de','nuire à','en revanche','il convient de','addictif','indéniable']},
+      {title:'Le travail à distance',sub:'远程工作的影响',hint:'使用复杂句型，subjonctif',kw:['bien que','quoique','à condition que','il est essentiel que','productivité','lien social','néanmoins','par ailleurs']},
+      {title:'La protection de l\'environnement',sub:'我们如何保护环境',hint:'用虚拟式+条件式表达建议',kw:['il faudrait que','à moins que','contribuer à','se mobiliser','prendre conscience','enjeu majeur','développement durable','négliger']},
+      {title:'Lʼéducation moderne',sub:'现代教育应该如何改变',hint:'论述题，正反论证',kw:['dʼune part','dʼautre part','or','ainsi','en définitive','former','sʼépanouir','remettre en question']},
+      {title:'La diversité culturelle',sub:'文化多样性的价值',hint:'抽象概念，用名词化表达',kw:['lʼenrichissement','la coexistence','favoriser','la tolérance','perpétuer','lʼidentité','transcender','sʼapproprier']}
+    ]
+  },
+  ja:{
+    A1:[
+      {title:'わたしのかぞく',sub:'介绍你的家人',hint:'AはBです',kw:['ちち','はは','あに','いもうと','います','やさしい','すきです','かぞく']},
+      {title:'すきなたべもの',sub:'介绍你喜欢的食物',hint:'〜がすきです',kw:['すし','ラーメン','おいしい','たべます','のみます','まいにち','すきです','やすい']},
+      {title:'わたしのまち',sub:'介绍你所在的城市',hint:'〜があります',kw:['みせ','こうえん','えき','おおきい','きれい','あります','ちかい','にぎやか']},
+      {title:'まいにちのせいかつ',sub:'描述你的日常生活',hint:'时间+动词',kw:['あさ','ごご','ばん','おきます','たべます','べんきょうします','ねます','まいにち']},
+      {title:'すきなどうぶつ',sub:'介绍你喜欢的动物',hint:'〜がすきです/〜はかわいいです',kw:['いぬ','ねこ','かわいい','おおきい','ちいさい','すきです','かいたい','どうぶつ']}
+    ],
+    A2:[
+      {title:'きのうしたこと',sub:'描述昨天做的事',hint:'た形（过去时）',kw:['きのう','〜ました','〜へいきました','たのしかった','つかれました','ともだちと','かえりました','でした']},
+      {title:'わたしのしゅみ',sub:'介绍你的爱好',hint:'〜のがすきです/〜ています',kw:['しゅみは','よく','ときどき','〜のがすきです','たのしい','むずかしい','まいしゅう','ちょっと']},
+      {title:'りょこうしたいところ',sub:'你想去的旅行目的地',hint:'〜たいです/〜にいきたいです',kw:['〜にいきたい','ゆうめいな','みたい','たべたい','きれい','ぜひ','いつか','たのしそう']},
+      {title:'わたしのいちにち',sub:'描述你的一天',hint:'时间顺序+て形连接',kw:['〜てから','まず','つぎに','それから','やっと','ごろ','じかん','つかれた']},
+      {title:'すきなきせつ',sub:'你最喜欢的季节',hint:'〜から/〜ので理由表达',kw:['はるがすき','あきは','なぜなら','〜から','きもちいい','すずしい','あつい','さむい']}
+    ],
+    B1:[
+      {title:'社会問題について',sub:'谈谈一个社会问题',hint:'N3：〜によって、〜ため、〜に対して',kw:['問題になっている','影響を与える','解決するためには','一方で','増加している','社会全体','重要だと思う','取り組む']},
+      {title:'日本の文化と私',sub:'日本文化与你的关联',hint:'N3：〜として、〜ことで、〜ながら',kw:['独特な文化','影響を受けた','伝統的な','変化してきた','興味を持った','〜に比べて','受け継がれている','一方']},
+      {title:'将来の夢と目標',sub:'描述你的未来梦想和目标',hint:'N3：〜ために、〜ようにする',kw:['将来は','努力している','実現するために','〜という夢','必要だと感じる','乗り越えて','貢献したい','目標']},
+      {title:'環境問題と私たち',sub:'环境问题与我们的生活',hint:'N3：〜によって引き起こされる',kw:['環境破壊','気候変動','取り組む必要がある','省エネ','持続可能な','一人一人が','〜べきだ','対策']},
+      {title:'テクノロジーと生活',sub:'科技对生活的改变',hint:'N3：〜に伴い、〜とともに',kw:['急速に発展した','利便性が高まった','〜に依存する','デメリットとして','生活様式','コミュニケーション','今後は','影響']}
+    ],
+    B2:[
+      {title:'現代社会の孤独',sub:'现代社会的孤独感',hint:'N2：〜にもかかわらず、〜をめぐって',kw:['にもかかわらず','孤立感','希薄化','〜をめぐる問題','一方では','深刻化している','向き合う','コミュニティ']},
+      {title:'グローバル化の影響',sub:'全球化对文化的影响',hint:'N2：抽象名词化，〜に際して',kw:['均一化','文化的アイデンティティ','〜をもたらす','相互理解','摩擦','多様性を尊重','〜に際して','普及']},
+      {title:'人工知能と人間の未来',sub:'AI与人类未来',hint:'N2：仮定・反論を含む論述',kw:['脅威となる','〜に取って代わる','創造性','倫理的問題','〜とは言い切れない','共存','再考する必要','依存']},
+      {title:'少子化問題への対策',sub:'少子化问题的对策',hint:'N2：政策論述，〜に向けた',kw:['少子高齢化','構造的な問題','〜に向けた政策','待機児童','多角的な視点','抜本的','財政負担','意識改革']},
+      {title:'働き方改革',sub:'工作方式改革',hint:'N2：問題提起→論証→提案',kw:['長時間労働','生産性','ワークライフバランス','〜が求められる','多様な働き方','雇用形態','見直す','実現するには']}
+    ]
+  },
+  en:{
+    A1:[
+      {title:'My family',sub:'介绍你的家人',hint:'Use is/has/likes',kw:['mother','father','brother','sister','he is','she has','they like','family']},
+      {title:'My favorite food',sub:'介绍你最喜欢的食物',hint:'I like / I eat',kw:['I like','I eat','delicious','pizza','rice','every day','favorite','yummy']},
+      {title:'My home',sub:'描述你的家',hint:'There is/There are',kw:['there is','there are','bedroom','kitchen','big','small','nice','live']},
+      {title:'My daily routine',sub:'描述你的日常生活',hint:'Simple present tense',kw:['I wake up','I go to','every day','morning','afternoon','usually','after that','then']},
+      {title:'My pet',sub:'介绍你的宠物',hint:'It is / It has',kw:['it is','it has','dog','cat','cute','small','big','love']}
+    ],
+    A2:[
+      {title:'My weekend',sub:'描述你的周末',hint:'Past tense: went/ate/watched',kw:['I went','I ate','I watched','with my friend','it was','fun','tired','last weekend']},
+      {title:'My hobby',sub:'介绍你的爱好',hint:'I enjoy / I love + -ing',kw:['I enjoy','I love','every week','sometimes','exciting','relax','since','really']},
+      {title:'My city',sub:'介绍你所在的城市',hint:'There are / You can',kw:['there are','you can','famous for','near','popular','people','transportation','recommend']},
+      {title:'My best friend',sub:'描述你最好的朋友',hint:'描述外貌和性格',kw:['we met','always','together','funny','kind','tall','short','since']},
+      {title:'My school/work',sub:'描述你的学校或工作',hint:'I have to / I need to',kw:['I study','I work','every day','difficult','interesting','I have to','learn','important']}
+    ],
+    B1:[
+      {title:'My ideal weekend',sub:'描述你理想的周末',hint:'使用would/could表达愿望',kw:['wake up','explore','dinner','relax','friends','peaceful','perfect','would love to']},
+      {title:'The city I live in',sub:'描述你所在的城市',hint:'有哪些特色，用现在完成时',kw:['known for','neighborhood','transportation','residents','vibrant','recommend','has become','over the years']},
+      {title:'Technology and life',sub:'科技对生活的影响',hint:'对比结构 although/however',kw:['although','however','has changed','connected','distracted','on the other hand','benefits','drawbacks']},
+      {title:'My last trip',sub:'回顾一次旅行经历',hint:'过去时叙述，用细节',kw:['I traveled to','it was','I discovered','the locals','although','unforgettable','I would recommend','experience']},
+      {title:'My plans for the future',sub:'分享未来计划',hint:'will/going to + hope to',kw:["Iʼm going to",'I hope to','in the future','achieve','improve','step by step','dream','eventually']}
+    ],
+    B2:[
+      {title:'Social media and society',sub:'社交媒体对社会的影响',hint:'论述结构，用复杂连接词',kw:['undeniably','nevertheless','it can be argued that','whereas','foster','undermine','paradoxically','discourse']},
+      {title:'The future of work',sub:'工作的未来',hint:'使用被动语态和虚拟语气',kw:['is likely to','are being replaced','it is crucial that','remote work','adapt to','skillset','redefine','unprecedented']},
+      {title:'Cultural identity in a globalized world',sub:'全球化中的文化认同',hint:'使用抽象名词和复杂句型',kw:['cultural homogenization','at the expense of','coexist','heritage','erode','simultaneously','nuanced perspective','assimilation']},
+      {title:'Education reform',sub:'教育改革的必要性',hint:'问题提出→论证→结论',kw:['current system','falls short','rote learning','critical thinking','it is imperative','equip students','foster creativity','overhauled']},
+      {title:'Environmental responsibility',sub:'个人与环境责任',hint:'正反论证，conditionals',kw:['were everyone to','collective action','insufficient','systemic change','hold accountable','at stake','viable','mitigate']}
+    ]
+  }
+};
+
+// 現在の難易度のトピックを返す
+function getTopics(){
+  const lv=S.wDifficulty||'B1';
+  return(WRITING_TOPICS_BY_LEVEL[S.lang]||WRITING_TOPICS_BY_LEVEL.en)[lv]||[];
+}
+
 const WRITING_TOPICS={
   fr:[
     {title:'Ma journée idéale',sub:'描述你理想中的一天',hint:'时间顺序',kw:['se lever','matin','déjeuner','se promener','soir','tranquille','parfait']},
@@ -337,7 +438,7 @@ let S={
   enabledLangs:{fr:true,ja:true,en:false},
   tense:'present',
   // add
-  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',
+  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',addMode:'dict',addManual:{word:'',reading:'',meaning:'',example:''},
   // practice
   pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,pStopToday:false,
   fSentenceMode:false,  // 造句モード on/off
@@ -658,11 +759,19 @@ function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class=
 function spkH(t,l,lb=''){const e=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<button class="spk-btn" onclick="speak('${e}','${l}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>${lb?' '+lb:''}</button>`;}
 
 function celebrate(){
-  ['🌸','✨','🎉','💫','🌟'].forEach((em,i)=>setTimeout(()=>{
-    const el=document.createElement('div');el.className='celebrate';el.textContent=em;
-    el.style.cssText=`margin-left:${-40+Math.random()*80}px;margin-top:${Math.random()*-20}px`;
-    document.body.appendChild(el);setTimeout(()=>el.remove(),1400);
-  },i*120));
+  const emojis=['🌸','✨','🎉','💫','🌟','🎊','⭐'];
+  emojis.forEach((em,i)=>setTimeout(()=>{
+    const el=document.createElement('div');
+    el.className='celebrate';
+    el.textContent=em;
+    // 画面全体にランダム配置
+    const x=15+Math.random()*70; // 15%~85% of screen width
+    const y=20+Math.random()*60; // 20%~80% of screen height
+    el.style.left=x+'vw';
+    el.style.top=y+'vh';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1400);
+  },i*100));
 }
 function sorted(){
   const ws=S.words.filter(w=>w.lang===S.lang);
@@ -786,15 +895,21 @@ async function doLookup(){
 
 function addH(){
   const r=S.addResult;
+  const isManual=S.addMode==='manual';
   return`
     <button class="btn-back" onclick="setView('list')">← 戻る</button>
     <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">単語を追加</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
+    ${isManual?manualAddH():dictAddH(r)}`;
+}
+
+
+function dictAddH(r){
+  return`
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <span style="background:${GL};color:#15803D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">📖 辞書</span>
       <span>+</span>
-      <span style="background:var(--amberb);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">⚡ AI 1回のみ</span>
-      <span style="color:var(--tx3)">永久保存</span>
+      <span style="background:var(--amberb);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">⚡ AI 1回</span>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:4px">
       <input id="addInput" class="inp" style="flex:1"
@@ -802,15 +917,54 @@ function addH(){
         value="${S.addInput.replace(/"/g,'&quot;')}" oninput="S.addInput=this.value"
         onkeydown="if(event.key==='Enter')doLookup()"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <button onclick="doLookup()" style="padding:12px 18px;background:${N};color:#fff;border:none;border-radius:12px;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:700;flex-shrink:0;transition:all .18s"
+      <button onclick="doLookup()" style="padding:12px 18px;background:${N};color:#fff;border:none;border-radius:12px;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:700;flex-shrink:0"
         ${S.addLoading?'disabled':''}>
         ${S.addLoading?'<span class="loading-pulse">検索中</span>':'🔍 検索'}
       </button>
     </div>
-    ${S.addErr?`<div class="err-msg">${S.addErr}</div>`:''}
+    ${S.addErr?`<div class="err-msg">${S.addErr}
+      <button onclick="S.addMode='manual';S.addErr='';render()" style="display:block;margin-top:6px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:0">✏️ 手動で入力する →</button>
+    </div>`:''}
     ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
     ${r?addPreviewH(r):''}`;
 }
+
+function manualAddH(){
+  const m=S.addManual||{};
+  return`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button onclick="S.addMode='dict';S.addErr='';render()" style="font-size:12px;padding:5px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2);font-weight:500">← 辞書検索に戻る</button>
+      <span style="font-size:12px;color:var(--tx3)">手動入力モード</span>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">単語 <span style="color:var(--red)">*</span></div>
+      <input class="inp" placeholder="${S.lang==='ja'?'例：立ち振る舞う':S.lang==='fr'?'例：se débrouiller':'例：serendipity'}"
+        value="${(m.word||'').replace(/"/g,'&quot;')}" oninput="S.addManual.word=this.value"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">${S.lang==='ja'?'読み（ふりがな）':S.lang==='fr'?'発音 (IPA)':'発音 (phonetic)'}（任意）</div>
+      <input class="inp" placeholder="${S.lang==='ja'?'例：たちふるまう':S.lang==='fr'?'例：/sə de.bʁu.je/':'例：/ˌser.ənˈdɪp.ɪ.ti/'}"
+        value="${(m.reading||'').replace(/"/g,'&quot;')}" oninput="S.addManual.reading=this.value"
+        autocomplete="off" spellcheck="false">
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">意味（中国語）<span style="color:var(--red)">*</span></div>
+      <input class="inp" placeholder="例：举止得体，随机应变"
+        value="${(m.meaning||'').replace(/"/g,'&quot;')}" oninput="S.addManual.meaning=this.value">
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">例文（任意）</div>
+      <textarea class="textarea" style="min-height:80px;font-size:14px"
+        placeholder="${S.lang==='ja'?'例：彼女は場の空気を読んで、うまく立ち振る舞った。':S.lang==='fr'?'例：Il faut savoir se débrouiller dans la vie.':'例：It was pure serendipity that we met.'}"
+        oninput="S.addManual.example=this.value">${(m.example||'')}</textarea>
+    </div>
+    ${S.addErr?`<div class="err-msg" style="margin-bottom:10px">${S.addErr}</div>`:''}
+    <button class="btn" onclick="confirmManualAdd()" ${!(m.word||'').trim()||(!(m.meaning||'').trim())?'disabled':''}>
+      ＋ 単語帳に追加
+    </button>`;
+}
+
 
 function addPreviewH(r){
   return`
@@ -845,6 +999,27 @@ function addPreviewH(r){
         <button class="btn" onclick="confirmAdd()">＋ 単語帳に追加（AI詳細付き）</button>
       `}
     </div>`;
+}
+
+function confirmManualAdd(){
+  const m=S.addManual||{};
+  const word=(m.word||'').trim();
+  const meaning=(m.meaning||'').trim();
+  if(!word||!meaning){S.addErr='単語と意味は必須です';render();return;}
+  const example=(m.example||'').trim();
+  const nw={
+    id:Date.now().toString(),word,lang:S.lang,
+    data:{word,reading:(m.reading||'').trim(),meaning,
+      delf:null,jlpt:null,gender:null,pluralNote:null,
+      examples:example?[{text:example,trans:'',vocab:[]}]:[],
+      grammar:'',related:'',wordFamily:[],conjugations:null,collocations:[],
+      source:'手動入力',allSenses:[{num:1,pos:'',text:meaning}],aiEnriched:false},
+    reviewCount:0,mastered:false,addedAt:Date.now()
+  };
+  S.words=[nw,...S.words];saveWords();
+  S.addManual={word:'',reading:'',meaning:'',example:''};
+  S.addErr='';
+  celebrate();setView('list');
 }
 
 async function confirmAdd(){
@@ -1079,12 +1254,20 @@ function resetP(){
 }
 function resetPFull(){S.pStopToday=false;resetP();}
 function practiceH(){
+  // 「今日はここまで」選択後の休憩画面
+  if(S.pStopToday)return`
+    <div style="text-align:center;padding:60px 20px">
+      <div style="font-size:60px;margin-bottom:16px">🌙</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>
+      <div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>
+      <button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button>
+    </div>`;
   return`
     <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>
     <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
     <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;" class="sort-bar">
       ${[['flash','🔁 フラッシュ'],['quiz_meaning','📖 意味選択'],['quiz_word','✍️ 単語選択'],['quiz_reading','🔊 発音→単語']].map(([k,l])=>
-        `<button class="sort-btn${S.pMode===k?' active':''}" style="flex-shrink:0" onclick="S.pMode='${k}';resetP();render()">${l}</button>`
+        `<button class="sort-btn${S.pMode===k?' active':''}" style="flex-shrink:0" onclick="S.pMode='${k}';S.fSentenceMode=false;resetP();render()">${l}</button>`
       ).join('')}
     </div>
     ${S.pMode==='flash'?flashH():quizH(S.pMode)}`;
@@ -1101,14 +1284,6 @@ function incrementSentenceCount(wordId){
 
 function flashH(){
   if(!S.fSess.length)return`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📚</div><div style="font-weight:600;color:var(--tx)">単語がありません</div><div>単語帳から追加しましょう</div></div>`;
-  if(S.pStopToday){
-    return`<div style="text-align:center;padding:40px 20px">
-      <div style="font-size:60px;margin-bottom:16px">🌙</div>
-      <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>
-      <div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>
-      <button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button>
-    </div>`;
-  }
   if(S.fDone){
     const ok=S.fSess.filter(w=>w._ok).length;
     const pct=Math.round(ok/S.fSess.length*100);
@@ -1341,7 +1516,7 @@ function writingLimitBadgeH(){
 function writingH(){
   if(S.wView==='history')return writingHistH();
   if(S.wView==='histDetail')return writingHistDetailH();
-  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
+  const topics=getTopics();
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
   if(S.wView==='result'&&S.wResult)return writingResultH(topic);
@@ -1372,7 +1547,7 @@ function writingH(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <span style="font-size:12px;color:var(--tx2);font-weight:500;flex-shrink:0">難易度：</span>
-      ${['A1','A2','B1','B2'].map(lv=>`<button onclick="S.wDifficulty='${lv}';render()"
+      ${['A1','A2','B1','B2'].map(lv=>`<button onclick="S.wDifficulty='${lv}';S.wTopicIdx=null;S.wText='';S.wUsedKw=[];S.wResult=null;render()"
         style="padding:4px 12px;font-size:12px;border:1.5px solid ${S.wDifficulty===lv?G:'var(--bd)'};border-radius:20px;background:${S.wDifficulty===lv?GL:'transparent'};color:${S.wDifficulty===lv?GD:'var(--tx2)'};cursor:pointer;font-family:inherit;font-weight:${S.wDifficulty===lv?'700':'400'};transition:all .18s">${lv}</button>`).join('')}
     </div>
     <div style="position:relative;cursor:pointer;margin-bottom:8px" onclick="S.wFullscreen=true;render()">
@@ -1470,7 +1645,7 @@ async function doWriting(){
   if(essayCountToday()>=3&&!S.wEssayId){S.wErr='📅 今日はすでに3篇書きました。明日（'+tomorrowStr()+'）また書いてみよう！';render();return;}
   if(today>=3||S.wRevCount>=3){S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね 😊';render();return;}
   S.wLoad=true;S.wErr='';render();
-  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
+  const topics=getTopics();
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
   const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
@@ -1651,18 +1826,6 @@ function statsH(){
         <div style="font-size:12px;color:var(--tx3);margin-top:4px">${avgScore?'平均'+avgScore+'点':essays.length?'採点なし':'まだなし'}</div>
       </div>
     </div>
-    ${tot>0?`
-    <div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:16px;border:1px solid var(--bd)">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;font-weight:600">
-        <span style="color:var(--gd)">習得済み ${mas}語</span>
-        <span style="color:var(--amber)">学習中 ${reviewing}語</span>
-        <span style="color:var(--tx3)">未学習 ${newWords}語</span>
-      </div>
-      <div style="height:10px;border-radius:10px;background:var(--bg3);overflow:hidden;display:flex">
-        <div style="width:${tot?mas/tot*100:0}%;background:var(--g);transition:width .5s"></div>
-        <div style="width:${tot?reviewing/tot*100:0}%;background:var(--amber);transition:width .5s"></div>
-      </div>
-    </div>`:''}
     <div class="sec-lbl">今週の学習</div>
     <div class="week-dots">
       ${['日','月','火','水','木','金','土'].map((d,i)=>`<div class="day-dot ${(today===0?i<=6:i<today)?'day-done':'day-todo'}">${d}</div>`).join('')}
@@ -1804,7 +1967,7 @@ function showApp(){
   if(!S.enabledLangs[S.lang]&&langs.length)S.lang=langs[0];
   const initials=U.email.slice(0,2).toUpperCase();
   document.getElementById('root').innerHTML=`
-    <div style="display:flex;flex-direction:column;height:100svh;max-height:100dvh;overflow:hidden">
+    <div style="display:flex;flex-direction:column;height:100svh;max-height:100dvh">
       <div class="top-bar">
         <div>${logoSmall()}</div>
         <div class="lang-toggle">
@@ -1856,7 +2019,7 @@ function render(){
 
 function setView(v){
   S.view=v;
-  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addAiLoading=false;}
+  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addAiLoading=false;S.addMode='dict';S.addManual={word:'',reading:'',meaning:'',example:''};}  
   if(v==='list')S.sel=null;
   render();
 }
