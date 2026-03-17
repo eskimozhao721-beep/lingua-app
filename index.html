@@ -1038,9 +1038,23 @@ async function confirmAdd(){
 function detailH(){
   const w=S.sel;if(!w)return'';
   const d=w.data;
+  // Calculate prev/next in current sorted list
+  const list=S.wordsView==='sentences'
+    ?S.words.filter(x=>x.lang===S.lang&&x.isSentence)
+    :S.words.filter(x=>x.lang===S.lang&&!x.isSentence);
+  const idx=list.findIndex(x=>x.id===w.id);
+  const prevW=idx>0?list[idx-1]:null;
+  const nextW=idx<list.length-1?list[idx+1]:null;
   return`
-    <button class="btn-back" onclick="goBackFromDetail()">← 戻る</button>
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+    <div id="detail-swipe-area"
+      ontouchstart="detailSwipeStart(event)"
+      ontouchend="detailSwipeEnd(event)"
+      style="min-height:60vh">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <button class="btn-back" onclick="goBackFromDetail()" style="margin-bottom:0">← 戻る</button>
+      <span style="font-size:11px;color:var(--tx3)">${idx+1} / ${list.length}</span>
+    </div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;margin-top:10px">
       <div style="font-size:30px;font-weight:800;color:var(--tx);letter-spacing:-.02em;flex:1">${d.word}</div>
       <button onclick="deleteWord('${w.id}')" style="padding:4px 10px;font-size:12px;border:1px solid #FECACA;border-radius:20px;background:transparent;cursor:pointer;color:var(--red);font-family:inherit;flex-shrink:0;margin-left:8px;margin-top:4px">削除</button>
     </div>
@@ -1094,7 +1108,9 @@ function detailH(){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
         この単語を練習する
       </span>
-    </button>`;
+    </button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--tx3)">← 前の単語 ／ 次の単語 →</div>
+    </div>`;
 }
 
 function deleteWord(id){
@@ -1339,7 +1355,7 @@ function quizH(){
       <span style="font-size:13px;color:var(--tx2);font-weight:500">正解 ${S.qScore.c}/${S.qScore.t}</span>
       <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;color:var(--tx3)">${ml}</span>
     </div>
-    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qIdx/(qs.length||1)*100)}%"></div></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
     <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;text-transform:uppercase">${{meaning:'どういう意味？',word:'どの単語？',reading:'発音を聞いて選ぶ'}[q.qMode]||''}</div>
       ${q.question==='__AUDIO__'
@@ -2141,6 +2157,31 @@ function setView(v){
   render();
 }
 function selWord(id){S.sel=S.words.find(w=>w.id===id);S.tense='present';S.view='detail';render();}
+
+let _detailSwipeX=0,_detailSwipeY=0;
+function detailSwipeStart(e){
+  _detailSwipeX=e.touches[0].clientX;
+  _detailSwipeY=e.touches[0].clientY;
+}
+function detailSwipeEnd(e){
+  const dx=e.changedTouches[0].clientX-_detailSwipeX;
+  const dy=Math.abs(e.changedTouches[0].clientY-_detailSwipeY);
+  if(dy>40||Math.abs(dx)<50)return; // ignore vertical scroll or tiny swipe
+  const w=S.sel;if(!w)return;
+  const list=S.wordsView==='sentences'
+    ?S.words.filter(x=>x.lang===S.lang&&x.isSentence)
+    :S.words.filter(x=>x.lang===S.lang&&!x.isSentence);
+  const idx=list.findIndex(x=>x.id===w.id);
+  if(dx<0&&idx<list.length-1){// swipe left → next word
+    S.sel=list[idx+1];S.tense='present';
+    document.getElementById('screen')?.scrollTo(0,0);
+    render();
+  }else if(dx>0&&idx>0){// swipe right → prev word
+    S.sel=list[idx-1];S.tense='present';
+    document.getElementById('screen')?.scrollTo(0,0);
+    render();
+  }
+}
 function goPractice(){S.tab='practice';S.pMode='flash';resetP();render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='practice'));}
 
 const ICONS={play:'▶',back:'←'};
