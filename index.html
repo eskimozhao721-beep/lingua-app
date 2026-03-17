@@ -219,7 +219,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .loading-pulse{animation:pulse 1.2s infinite;}
 
 /* ── Fullscreen writing ── */
-.wf-screen{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;}
+.wf-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;}
 .wf-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;padding-top:max(13px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);flex-shrink:0;}
 .wf-body{flex:1;display:flex;flex-direction:column;padding:12px 16px;gap:8px;overflow:hidden;}
 .wf-textarea{flex:1;width:100%;padding:14px;border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:16px;outline:none;font-family:inherit;background:var(--bg);color:var(--tx);resize:none;line-height:1.7;transition:border-color .18s;}
@@ -1311,7 +1311,7 @@ function writingH(){
   if(S.wView==='histDetail')return writingHistDetailH();
   const {topic,topics,ti}=getWritingTopic();
   if(S.wView==='result'&&S.wResult)return writingResultH(topic);
-  if(S.wFullscreen)return''; // fullscreen is rendered in #wf-overlay by render()
+  if(S.wFullscreen)return fullscreenH(topic);
   const myEssays=S.wHistory.filter(e=>e.lang===S.lang);
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1974,7 +1974,6 @@ function showApp(){
         </div>
       </div>
       <div class="screen" id="screen"></div>
-      <div id="wf-overlay" style="display:none;position:fixed;inset:0;z-index:100;"></div>
       <nav class="navbar">
         <div class="nav-item active" data-tab="words" onclick="switchTab('words')">
           <span class="nav-icon">
@@ -2003,14 +2002,6 @@ function showApp(){
 
 function render(){
   const sc=document.getElementById('screen');if(!sc)return;
-  const ov=document.getElementById('wf-overlay');
-  // Handle fullscreen writing overlay
-  if(S.tab==='writing'&&S.wFullscreen){
-    if(ov){ov.style.display='block';ov.innerHTML=fullscreenH(getWritingTopic());}
-    sc.innerHTML=writingH();
-    return;
-  }
-  if(ov)ov.style.display='none';
   if(S.tab==='words'){
     if(S.view==='list')sc.innerHTML=wordsListH();
     else if(S.view==='detail')sc.innerHTML=detailH();
