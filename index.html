@@ -40,7 +40,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .app{width:100%;max-width:430px;min-height:100svh;background:var(--bg);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
 
 /* ── Top bar ── */
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:30;gap:8px;backdrop-filter:blur(12px);}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:30;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .lang-toggle{display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:2px;overflow-x:auto;flex-shrink:0;}
 .lang-toggle::-webkit-scrollbar{display:none;}
 .lang-btn{padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;font-family:inherit;color:var(--tx2);border-radius:8px;white-space:nowrap;transition:all .18s;}
@@ -51,7 +51,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .logout-x{font-size:14px;color:var(--tx3);cursor:pointer;background:none;border:none;padding:2px 0 2px 4px;line-height:1;}
 
 /* ── Screen ── */
-.screen{flex:1;overflow-y:auto;padding:20px 16px 96px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
+.screen{flex:1;overflow-y:auto;padding:20px 16px calc(96px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
 
 /* ── Navbar ── */
 .navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:30;padding-bottom:env(safe-area-inset-bottom);}
@@ -247,6 +247,18 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 <script>
 'use strict';
 const ADMIN_EMAIL='irishsiang1210@gmail.com';
+const DEFAULT_WHITELIST=["eskimozhao721@gmail.com","irishsiang1210@gmail.com"];
+function lsGet(k){try{return localStorage.getItem(k);}catch{return null;}}
+function getWhitelist(){
+  try{const s=JSON.parse(lsGet('lingua-whitelist')||'[]');return[...new Set([...DEFAULT_WHITELIST,...s])];}
+  catch{return DEFAULT_WHITELIST;}
+}
+function isWhitelisted(email){
+  if(!email)return false;
+  const e=email.toLowerCase().trim();
+  if(e===ADMIN_EMAIL)return true;
+  return getWhitelist().map(x=>x.toLowerCase().trim()).includes(e);
+}
 // ═══════════════════════════════════════
 //  Lingua — Language Learning App
 //  v4.0 — Full rewrite with optimizations
@@ -504,25 +516,22 @@ function getBestVoice(lang){
   return best||null;
 }
 function speak(text,lang){
-  if(!text)return;
-  const bcp=LANG[lang]&&LANG[lang].bcp||'ja-JP';
+  if(!text||!text.trim())return;
+  const bcp=(LANG[lang]&&LANG[lang].bcp)||'ja-JP';
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
+  const u=new SpeechSynthesisUtterance(text.trim());
   u.lang=bcp;u.rate=0.9;u.pitch=1.0;
-  // 自然な音声を優先選択
-  const voices=speechSynthesis.getVoices();
-  const preferred=voices.filter(v=>v.lang.startsWith(bcp.slice(0,2)));
-  const natural=preferred.find(v=>/premium|enhanced|natural|siri|kyoko|amelie|thomas|lea|pierre/i.test(v.name));
-  const good=preferred.find(v=>!v.localService===false||v.localService);
-  if(natural)u.voice=natural;
-  else if(good)u.voice=good;
-  else if(preferred[0])u.voice=preferred[0];
-  // voicesがまだロードされていない場合
-  if(!voices.length){
-    speechSynthesis.onvoiceschanged=()=>{const v2=speechSynthesis.getVoices().filter(v=>v.lang.startsWith(bcp.slice(0,2)));const n2=v2.find(v=>/premium|enhanced|natural/i.test(v.name));if(n2)u.voice=n2;else if(v2[0])u.voice=v2[0];speechSynthesis.speak(u);};
-  }else{
+  function trySpeak(){
+    const voices=speechSynthesis.getVoices();
+    if(voices.length){
+      const pref=voices.filter(v=>v.lang.startsWith(bcp.slice(0,2)));
+      const best=pref.find(v=>/premium|enhanced|natural|siri|kyoko|amelie|thomas/i.test(v.name))||pref.find(v=>v.localService)||pref[0];
+      if(best)u.voice=best;
+    }
     speechSynthesis.speak(u);
   }
+  if(speechSynthesis.getVoices().length){trySpeak();}
+  else{speechSynthesis.onvoiceschanged=()=>{trySpeak();speechSynthesis.onvoiceschanged=null;};}
 }
 
 // ── Helpers ──
@@ -690,11 +699,31 @@ function addPreviewH(r){
         </div>
         <button class="btn" disabled>追加中...</button>
       `:`
-        <button class="btn" onclick="confirmAdd()">＋ 単語帳に追加（AI詳細付き）</button>
+        <div style="display:flex;gap:8px">
+          <button onclick="quickAdd()" style="flex:1;padding:13px;background:var(--bg3);color:var(--tx);border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;touch-action:manipulation;">＋ すぐ追加</button>
+          <button onclick="confirmAdd()" style="flex:1;padding:13px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">⚡ AI詳細付き</button>
+        </div>
       `}
     </div>`;
 }
 
+function quickAdd(){
+  const r=S.addResult;if(!r)return;
+  const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===r.word.toLowerCase());
+  if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日に追加済みです（復習"+dup.reviewCount+"回）";render();return;}
+  const meaning=(S.addMemo&&S.addMemo.trim())||(r.allSenses&&r.allSenses[0]&&r.allSenses[0].text)||r.meanings||r.word;
+  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,
+    data:{word:r.word,reading:r.reading||"",meaning,
+      delf:S.lang==="fr"?r.delf||null:null,jlpt:S.lang==="ja"?r.jlpt||null:null,
+      gender:null,pluralNote:null,examples:[],grammar:"",related:"",
+      wordFamily:[],conjugations:null,collocations:[],
+      source:r.source||"辞書",allSenses:r.allSenses||[],aiEnriched:false},
+    reviewCount:0,mastered:false,addedAt:Date.now()};
+  S.words=[nw,...S.words];saveWords();
+  const p=r.word.length>20?r.word.slice(0,20)+"…":r.word;
+  S.addInput="";S.addResult=null;S.addErr="";S.addMemo="";
+  showToast("✓ 「"+p+"」を追加しました");setView("list");
+}
 async function confirmAdd(){
   const r=S.addResult;if(!r)return;
   const memo=document.getElementById('addMemo')?.value.trim()||S.addMemo||'';
@@ -1510,7 +1539,16 @@ function showLogin(){
       setTimeout(transitionToLogin,100);
     }else{
       localStorage.setItem('lingua-splash-seen','1');
-      setTimeout(transitionToLogin,2000);
+      // 画像ロード完了後に2秒計測開始
+      const img=splash.querySelector('img');
+      if(img&&!img.complete){
+        img.onload=()=>setTimeout(transitionToLogin,2000);
+        img.onerror=()=>setTimeout(transitionToLogin,2000);
+        // フォールバック：最大5秒
+        setTimeout(transitionToLogin,5000);
+      }else{
+        setTimeout(transitionToLogin,2000);
+      }
     }
   }
 }
