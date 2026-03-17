@@ -473,6 +473,28 @@ function tomorrowStr(){
   return d.toLocaleDateString('ja-JP',{month:'long',day:'numeric'});
 }
 
+// ── JSON extraction helper (handles extra text / markdown fences) ──
+function extractJSON(txt){
+  if(!txt)throw new Error('空のレスポンス');
+  // Strip markdown fences
+  let s=txt.replace(/```json[\s\S]*?```/g,m=>m.slice(7,-3))
+           .replace(/```[\s\S]*?```/g,m=>m.slice(3,-3))
+           .trim();
+  // Try direct parse first
+  try{return JSON.parse(s);}catch{}
+  // Extract outermost {...}
+  const start=s.indexOf('{'),end=s.lastIndexOf('}');
+  if(start!==-1&&end>start){
+    try{return JSON.parse(s.slice(start,end+1));}catch{}
+  }
+  // Extract outermost [...]
+  const as=s.indexOf('['),ae=s.lastIndexOf(']');
+  if(as!==-1&&ae>as){
+    try{return JSON.parse(s.slice(as,ae+1));}catch{}
+  }
+  throw new Error('JSON Parse error: '+s.slice(0,60));
+}
+
 // ── API call (writing correction only) ──
 async function callApi(prompt,max=1000,model='claude-haiku-4-5-20251001'){
   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -483,7 +505,7 @@ async function callApi(prompt,max=1000,model='claude-haiku-4-5-20251001'){
   return d.content.map(i=>i.text||'').join('');
 }
 async function callApiSonnet(prompt,max=1000){
-  return callApi(prompt,max,'claude-sonnet-4-6');
+  return callApi(prompt,max,'claude-sonnet-4-20250514');
 }
 
 // ═══════════════════════
@@ -582,13 +604,13 @@ function buildPrompt(word,meaning,lang,pos){
   if(lang==='fr'){
     const gp=nn?',"gender":{"masc":"","fem":null,"mascPl":"","irregular":false}':',"gender":null';
     const cp=vb?',"conjugations":'+FR_CONJ:',"conjugations":null';
-    return `法语单词「${word}」意思(${meaning})。只返回JSON,不要解释:{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"中文1句语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
+    return `Return ONLY valid JSON, no explanation, no markdown:\n{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"中文1句语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}\nFill in for French word「${word}」meaning(${meaning}).`;
   }
   if(lang==='ja'){
     const cp=vb?',"conjugations":'+JA_CONJ:',"conjugations":null';
-    return `日「${word}」(${meaning})。JSON only:{"reading":"假名(roma)","examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
+    return `Return ONLY valid JSON, no explanation, no markdown:\n{"reading":"假名(roma)","examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}\nFill in for Japanese word「${word}」meaning(${meaning}).`;
   }
-  return `EN「${word}」(${meaning})。JSON only:{"reading":"/IPA/","examples":${ex2},"grammar":"中文语法要点","related":"related words","wordFamily":${wf2},"conjugations":null,"collocations":${col3}}`;
+  return `Return ONLY valid JSON, no explanation, no markdown:\n{"reading":"/IPA/","examples":${ex2},"grammar":"中文语法要点","related":"related words","wordFamily":${wf2},"conjugations":null,"collocations":${col3}}\nFill in for English word「${word}」meaning(${meaning}).`;
 }
 
 // ── Speech synthesis ──
@@ -938,8 +960,8 @@ async function confirmAdd(){
   S.addAiLoading=true;render();
   // AI enrichment
   try{
-    const txt=await callApi(buildPrompt(r.word,meaning,S.lang,pos),1000);
-    const ai=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    const txt=await callApi(buildPrompt(r.word,meaning,S.lang,pos),1200);
+    const ai=extractJSON(txt);
     const idx=S.words.findIndex(w=>w.id===nw.id);
     if(idx>=0){
       const d=S.words[idx].data;
@@ -1093,8 +1115,8 @@ async function enrichWord(id){
   const btn=document.querySelector('.enrich-banner button');
   if(btn){btn.textContent='生成中...';btn.disabled=true;}
   try{
-    const txt=await callApi(buildPrompt(d.word,d.meaning,w.lang,d.allSenses?.[0]?.pos||''),1000);
-    const ai=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    const txt=await callApi(buildPrompt(d.word,d.meaning,w.lang,d.allSenses?.[0]?.pos||''),1200);
+    const ai=extractJSON(txt);
     if(ai.reading&&!d.reading)d.reading=ai.reading;
     if(ai.gender)d.gender=ai.gender;
     if(ai.examples?.length)d.examples=ai.examples;
@@ -1384,9 +1406,7 @@ async function doWriting(){
   if(today>=1&&!S.wEssayId){S.wErr=' 今日はすでに1篇書きました。明日（'+tomorrowStr()+'）また書いてみよう！';render();return;}
   if(today>=3||S.wRevCount>=3){S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね ';render();return;}
   S.wLoad=true;S.wErr='';render();
-  const _twAll=WRITING_TOPICS[S.lang];
-  const _tdiff=S.wDifficulty||'B1';
-  const topics=(_twAll&&!Array.isArray(_twAll))?(_twAll[_tdiff]||Object.values(_twAll)[0]):(_twAll||WRITING_TOPICS.en);
+  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
   const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
@@ -1397,7 +1417,7 @@ async function doWriting(){
 ${txt.trim()}\\
 \\
 JSON only:{"score":1-10,"corrected":"修正后文章","errors":[{"type":"","original":"","fixed":"","note":""}],"praise":""}`,1000);
-    S.wResult=JSON.parse(t.replace(/```json|```/g,'').trim());
+    S.wResult=extractJSON(t);
     if(!S.wEssayId)S.wEssayId=Date.now().toString();
     S.wRevCount++;
     S.wHistory=[{id:Date.now().toString(),lang:S.lang,topic:topic.title,original:txt.trim(),result:S.wResult,score:S.wResult.score||null,date:Date.now(),essayId:S.wEssayId,revNum:S.wRevCount},...S.wHistory];
@@ -2099,8 +2119,7 @@ async function doSentenceCheck(wordId,word,lang){
   const langName={fr:'フランス語',ja:'日本語',en:'英語'}[lang]||'英語';
   try{
     const t=await callApi('あなたは'+langName+'の先生です。生徒が「'+word+'」を使って作った文を添削してください。\nJSON形式のみで返してください: {"score":1-10,"corrected":"修正後の文","note":"日本語で1-2文のアドバイス"}\n\n生徒の文: '+txt.trim(),350);
-    const ai=JSON.parse(t.replace(/```json|```/g,'').trim());
-    S.fSentenceResult=ai;
+    const ai=extractJSON(t);
     incrementSentenceCount(wordId);
   }catch(e){S.fSentenceErr='添削に失敗しました（'+e.message+'）';}
   S.fSentenceLoading=false;render();
