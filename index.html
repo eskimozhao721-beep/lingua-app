@@ -488,19 +488,16 @@ async function lookupFr(word){
     try{
       const result=await _lookupFrRaw(candidate);
       if(result){
-        // Validate: result word should be similar to what we searched
-        const rw=(result.word||'').toLowerCase();
-        const cw=candidate.toLowerCase();
-        // Reject if result is single char but input was longer
-        if(rw.length===1&&cw.length>1)continue;
-        // Reject if result word is completely different (edit distance heuristic)
-        if(rw.length>0&&cw.length>0&&!rw.startsWith(cw[0])&&!cw.startsWith(rw[0]))continue;
+        // Only reject if result word is a single letter but we searched for a longer word
+        const rw=(result.word||'').toLowerCase().trim();
+        if(rw.length===1 && candidate.length>2) continue;
         return result;
       }
     }catch(e){lastErr=e;}
   }
   throw lastErr||new Error('「'+word+'」が見つかりません。スペルを確認してください。');
 }
+
 
 async function _lookupFrRaw(word){
   // Try zh.wiktionary for Chinese definitions
@@ -732,53 +729,35 @@ async function doLookup(){
   const raw=(inp?.value||S.addInput).trim();
   if(!raw)return;
 
-  // 長文・例句チェック（スペース除去の前に判定）
-  const looksLikeSentence=raw.includes(' ')||raw.length>40;
-  if(looksLikeSentence){
+  // Long text → manual form directly
+  if(raw.includes(' ')||raw.length>40){
     S.addInput=raw;
     S.addErr='長文は辞書検索できません。下のフォームから手動登録してください。';
     S.addLoading=false;S.addResult=null;render();
-    setTimeout(()=>{
-      const el=document.getElementById('manualMeaning');if(el)el.focus();
-      const si=document.getElementById('manualIsSentence');if(si)si.checked=true;
-    },80);
+    setTimeout(()=>{document.getElementById('manualMeaning')?.focus();setManualType('sentence');},80);
     return;
   }
 
-  // 単語: スペース除去・正規化
-  let word=raw.replace(/\s+/g,'');
+  const word=raw.replace(/\s+/g,'');
   if(inp)inp.value=word;
   S.addInput=word;
 
+  // Duplicate check
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
+
   S.addLoading=true;S.addResult=null;S.addErr='';render();
   try{
-    if(S.lang==='fr'){
-      let result=await lookupFr(word);
-      if(!result){
-        try{
-          S.addErr='アクセント記号を確認中...';render();
-          const corrected=await callApi('フランス語の単語「'+word+'」の正しいスペル（アクセント記号込み）を単語のみ返してください：',30);
-          const fixed=corrected.trim().replace(/\s/g,'');
-          if(fixed&&fixed.toLowerCase()!==word.toLowerCase()){
-            S.addErr='「'+word+'」→「'+fixed+'」で再検索...';render();
-            result=await lookupFr(fixed);
-            if(result)word=fixed;
-          }
-        }catch(e2){}
-      }
-      if(!result)throw new Error('「'+word+'」が見つかりません。スペルを確認してください。');
-      S.addResult=result;
-    }else if(S.lang==='ja'){
-      S.addResult=await lookupJa(word);
-    }else{
-      S.addResult=await lookupEn(word);
-    }
-  }catch(e){S.addErr=e.message||'見つかりませんでした';}
+    if(S.lang==='fr') S.addResult=await lookupFr(word);
+    else if(S.lang==='ja') S.addResult=await lookupJa(word);
+    else S.addResult=await lookupEn(word);
+  }catch(e){
+    S.addErr=e.message||'見つかりませんでした';
+  }
   S.addLoading=false;render();
   setTimeout(()=>{const i=document.getElementById('addInput');if(i){i.value=word;i.focus();}},30);
 }
+
 
 
 function addH(){
@@ -880,43 +859,50 @@ function manualAdd(){
   const meaning=(document.getElementById('manualMeaning')?.value||'').trim();
   if(!meaning){showToast('中文释义を入力してください');return;}
   const reading=(document.getElementById('manualReading')?.value||'').trim();
-  const exText=(document.getElementById('manualExample')?.value||'').trim();
+  // Duplicate check
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
-  const examples=exText?[{text:exText,trans:''}]:[];
-  const isSentenceEntry=(document.getElementById('quickIsSentence')?.checked)||(document.getElementById('manualIsSentence')?.checked)||false;
-  const nw={id:Date.now().toString(),word,lang:S.lang,isSentence:isSentenceEntry,
+  // isSentence: read from toggle button state (manualIsSentenceVal hidden input)
+  const isSentenceVal=document.getElementById('manualIsSentenceVal')?.value;
+  const isSentence=isSentenceVal==='true'||(word.includes(' ')||word.length>30);
+  const nw={id:Date.now().toString(),word,lang:S.lang,isSentence,
     data:{word,reading,meaning,
-      delf:S.lang==='fr'?null:null,jlpt:S.lang==='ja'?null:null,
-      gender:null,pluralNote:null,examples,grammar:'',related:'',
-      wordFamily:[],conjugations:null,collocations:[],
+      delf:null,jlpt:null,gender:null,pluralNote:null,
+      examples:[],grammar:'',related:'',wordFamily:[],conjugations:null,collocations:[],
       source:'手動',allSenses:[{text:meaning}],aiEnriched:false},
     reviewCount:0,mastered:false,addedAt:Date.now()};
   S.words=[nw,...S.words];saveWords();
   const p=word.length>20?word.slice(0,20)+'…':word;
   S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';
-  showToast('✓「'+p+'」を追加しました');setView('list');
+  celebrate();showToast('✓ 「'+p+'」を追加しました');setView('list');
 }
+
 function quickAdd(){
   const r=S.addResult;if(!r)return;
+  // Duplicate check
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===r.word.toLowerCase());
-  if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日に追加済みです（復習"+dup.reviewCount+"回）";render();return;}
-  const meaning=(S.addMemo&&S.addMemo.trim())||(r.allSenses&&r.allSenses[0]&&r.allSenses[0].text)||r.meanings||r.word;
-  const exText=(document.getElementById('addExample')?.value||S.addExample||'').trim();
+  if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
+  const memoEl=document.getElementById('addMemo');
+  const exEl=document.getElementById('addExample');
+  const cbEl=document.getElementById('addIsSentence');
+  const meaning=(memoEl?.value||S.addMemo||'').trim()||(r.allSenses&&r.allSenses[0]&&r.allSenses[0].text)||r.meanings||r.word;
+  const exText=(exEl?.value||S.addExample||'').trim();
+  const isSentence=cbEl?.checked||false;
   const examples=exText?[{text:exText,trans:''}]:[];
-  const isSentenceEntry=document.getElementById('quickIsSentence')?.checked||false;
-  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence:isSentenceEntry,
-    data:{word:r.word,reading:r.reading||"",meaning,
-      delf:S.lang==="fr"?r.delf||null:null,jlpt:S.lang==="ja"?r.jlpt||null:null,
-      gender:null,pluralNote:null,examples,grammar:"",related:"",
+  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence,
+    data:{word:r.word,reading:r.reading||'',meaning,
+      delf:S.lang==='fr'?r.delf||null:null,
+      jlpt:S.lang==='ja'?r.jlpt||null:null,
+      gender:null,pluralNote:null,examples,grammar:'',related:'',
       wordFamily:[],conjugations:null,collocations:[],
-      source:r.source||"辞書",allSenses:r.allSenses||[],aiEnriched:false},
+      source:r.source||'辞書',allSenses:r.allSenses||[],aiEnriched:false},
     reviewCount:0,mastered:false,addedAt:Date.now()};
   S.words=[nw,...S.words];saveWords();
-  const p=r.word.length>20?r.word.slice(0,20)+"…":r.word;
-  S.addInput="";S.addResult=null;S.addErr="";S.addMemo="";
-  celebrate();showToast("✓ 「"+p+"」を追加しました");setView("list");
+  const p=r.word.length>20?r.word.slice(0,20)+'…':r.word;
+  S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';
+  celebrate();showToast('✓ 「'+p+'」を追加しました');setView('list');
 }
+
 async function confirmAdd(){
   const r=S.addResult;if(!r)return;
   const memo=document.getElementById('addMemo')?.value.trim()||S.addMemo||'';
@@ -930,7 +916,8 @@ async function confirmAdd(){
     render();return;
   }
   // Save immediately
-  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,
+  const isSentenceEntry=document.getElementById('addIsSentence')?.checked||false;
+  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence:isSentenceEntry,
     data:{word:r.word,reading:r.reading||'',meaning,
       delf:S.lang==='fr'?r.delf||null:null,jlpt:S.lang==='ja'?r.jlpt||null:null,
       gender:null,pluralNote:null,examples:[],grammar:'',related:'',
