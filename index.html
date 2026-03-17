@@ -777,11 +777,13 @@ function addH(){
       <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;margin-top:12px">
         <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:10px">📝 手動で直接追加</div>
         <input class="inp" id="manualMeaning" placeholder="中文释义（必须）" style="margin-bottom:8px">
-        <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':'発音（任意）'}" style="margin-bottom:8px">
-
-        <div style="display:flex;gap:8px">
-          <button onclick="manualAdd()" style="flex:1;padding:11px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">＋ 追加する</button>
+        <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':'発音（任意）'}" style="margin-bottom:12px">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="manualTypeWord" onclick="setManualType('word')" style="flex:1;padding:9px;border-radius:var(--r);border:1.5px solid var(--g);background:var(--gl);color:var(--gd);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;">📚 単語</button>
+          <button id="manualTypeSent" onclick="setManualType('sentence')" style="flex:1;padding:9px;border-radius:var(--r);border:1.5px solid var(--bd);background:transparent;color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;touch-action:manipulation;">📖 例句</button>
         </div>
+        <input type="hidden" id="manualIsSentenceVal" value="false">
+        <button onclick="manualAdd()" style="width:100%;padding:12px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">＋ 追加する</button>
       </div>
     `:''}
     ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
@@ -832,6 +834,14 @@ function addPreviewH(r){
     </div>`;
 }
 
+function setManualType(type){
+  const isSent=type==='sentence';
+  document.getElementById('manualIsSentenceVal').value=isSent?'true':'false';
+  const wordBtn=document.getElementById('manualTypeWord');
+  const sentBtn=document.getElementById('manualTypeSent');
+  if(wordBtn){wordBtn.style.borderColor=isSent?'var(--bd)':'var(--g)';wordBtn.style.background=isSent?'transparent':'var(--gl)';wordBtn.style.color=isSent?'var(--tx2)':'var(--gd)';wordBtn.style.fontWeight=isSent?'500':'700';}
+  if(sentBtn){sentBtn.style.borderColor=isSent?'var(--g)':'var(--bd)';sentBtn.style.background=isSent?'var(--gl)':'transparent';sentBtn.style.color=isSent?'var(--gd)':'var(--tx2)';sentBtn.style.fontWeight=isSent?'700':'500';}
+}
 function manualAdd(){
   const word=S.addInput.trim();
   if(!word){showToast('単語を入力してください');return;}
