@@ -37,10 +37,10 @@
   }
 }
 body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;min-height:100svh;display:flex;justify-content:center;line-height:1.5;}
-.app{width:100%;max-width:430px;height:100svh;background:var(--bg);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;}
+.app{width:100%;max-width:430px;min-height:100svh;background:var(--bg);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
 
 /* ── Top bar ── */
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:20;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:20;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .lang-toggle{display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:2px;overflow-x:auto;flex-shrink:0;}
 .lang-toggle::-webkit-scrollbar{display:none;}
 .lang-btn{padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;font-family:inherit;color:var(--tx2);border-radius:8px;white-space:nowrap;transition:all .18s;}
@@ -51,10 +51,10 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .logout-x{font-size:14px;color:var(--tx3);cursor:pointer;background:none;border:none;padding:2px 0 2px 4px;line-height:1;}
 
 /* ── Screen ── */
-.screen{flex:1;overflow-y:auto;padding:20px 16px 24px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
+.screen{flex:1;overflow-y:auto;padding:20px 16px calc(80px + env(safe-area-inset-bottom));padding-top:calc(60px + max(10px,env(safe-area-inset-top)));-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
 
 /* ── Navbar ── */
-.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:20;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:20;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .nav-item{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;font-size:10px;color:var(--tx3);transition:color .18s;font-weight:500;}
 .nav-item.active{color:var(--g);}
 .nav-icon{font-size:20px;display:block;margin-bottom:2px;transition:transform .2s;}
@@ -1293,22 +1293,25 @@ function writingLimitBadgeH(){
   return`<span style="font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;background:var(--amberb);color:var(--amber)">添削：${n}/3回</span>`;
 }
 
-function writingH(){
-  if(S.wView==='history')return writingHistH();
-  if(S.wView==='histDetail')return writingHistDetailH();
+function getWritingTopic(){
   const _topicsAll=WRITING_TOPICS[S.lang];
   const _diff=S.wDifficulty||'B1';
   const topics=(_topicsAll&&!Array.isArray(_topicsAll))
     ?(_topicsAll[_diff]||_topicsAll['B1']||Object.values(_topicsAll)[0])
     :(_topicsAll||WRITING_TOPICS.en);
-  // Reset topic index if it's a new day
   const _today=new Date().toISOString().slice(0,10);
   if(S.wLastTopicDate&&S.wLastTopicDate!==_today){S.wTopicIdx=null;S.wLastTopicDate=_today;}
   if(!S.wLastTopicDate)S.wLastTopicDate=_today;
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
-  const topic=topics[ti];
+  return{topic:topics[ti],topics,ti};
+}
+
+function writingH(){
+  if(S.wView==='history')return writingHistH();
+  if(S.wView==='histDetail')return writingHistDetailH();
+  const {topic,topics,ti}=getWritingTopic();
   if(S.wView==='result'&&S.wResult)return writingResultH(topic);
-  if(S.wFullscreen)return fullscreenH(topic);
+  if(S.wFullscreen)return''; // fullscreen is rendered in #wf-overlay by render()
   const myEssays=S.wHistory.filter(e=>e.lang===S.lang);
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1971,6 +1974,7 @@ function showApp(){
         </div>
       </div>
       <div class="screen" id="screen"></div>
+      <div id="wf-overlay" style="display:none;position:fixed;inset:0;z-index:100;"></div>
       <nav class="navbar">
         <div class="nav-item active" data-tab="words" onclick="switchTab('words')">
           <span class="nav-icon">
@@ -1999,6 +2003,14 @@ function showApp(){
 
 function render(){
   const sc=document.getElementById('screen');if(!sc)return;
+  const ov=document.getElementById('wf-overlay');
+  // Handle fullscreen writing overlay
+  if(S.tab==='writing'&&S.wFullscreen){
+    if(ov){ov.style.display='block';ov.innerHTML=fullscreenH(getWritingTopic());}
+    sc.innerHTML=writingH();
+    return;
+  }
+  if(ov)ov.style.display='none';
   if(S.tab==='words'){
     if(S.view==='list')sc.innerHTML=wordsListH();
     else if(S.view==='detail')sc.innerHTML=detailH();
@@ -2145,6 +2157,7 @@ async function doSentenceCheck(wordId,word,lang){
   try{
     const t=await callApi('あなたは'+langName+'の先生です。生徒が「'+word+'」を使って作った文を添削してください。\nJSON形式のみで返してください: {"score":1-10,"corrected":"修正後の文","note":"日本語で1-2文のアドバイス"}\n\n生徒の文: '+txt.trim(),350);
     const ai=extractJSON(t);
+    S.fSentenceResult=ai;
     incrementSentenceCount(wordId);
   }catch(e){S.fSentenceErr='添削に失敗しました（'+e.message+'）';}
   S.fSentenceLoading=false;render();
