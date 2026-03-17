@@ -1139,11 +1139,12 @@ function reviewedTodaySet(){
   try{const r=lsGet('lingua-reviewed-'+((U&&U.sk)||'guest')+'-'+today);if(r)JSON.parse(r).forEach(id=>s.add(id));}catch{}
   return s;
 }
-function markReviewedToday(wordId){
+function markReviewedTodayKey(key){
   const today=todayStr();
-  const key='lingua-reviewed-'+((U&&U.sk)||'guest')+'-'+today;
-  try{const s=reviewedTodaySet();s.add(wordId);lsSet(key,JSON.stringify([...s]));}catch{}
+  const storageKey='lingua-reviewed-'+((U&&U.sk)||'guest')+'-'+today;
+  try{const s=reviewedTodaySet();s.add(key);lsSet(storageKey,JSON.stringify([...s]));}catch{}
 }
+function markReviewedToday(wordId){markReviewedTodayKey(wordId);}
 function resetP(){
   const reviewed=reviewedTodaySet();
   const all=S.words.filter(w=>w.lang===S.lang);
@@ -1249,21 +1250,50 @@ function flashH(){
 
 
 function quizH(){
-  const v=S.words.filter(w=>w.lang===S.lang);
+  const v=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
   if(!v.length)return'<div class="empty-state">単語を追加してください</div>';
-  if(!S.qSess||!S.qSess.length||S.qSessLang!==S.lang){S.qSess=buildQSess(S.lang);S.qSessLang=S.lang;}
-  const qs=S.qSess,q=qs[S.qIdx%qs.length];
+  // Filter to words not yet reviewed today
+  const reviewed=reviewedTodaySet();
+  const due=v.filter(w=>!reviewed.has('q-'+w.id));
+  // All done today
+  if(!due.length){
+    const allWords=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
+    return`<div style="text-align:center;padding:32px 20px">
+      <div style="font-size:56px;margin-bottom:16px">🎉</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;color:var(--tx)">今日の復習完了！</div>
+      <div style="font-size:15px;color:var(--tx2);margin-bottom:8px">全 ${allWords.length} 語を復習しました</div>
+      <div style="font-size:13px;color:var(--tx3);margin-bottom:24px">新しい単語を追加すると、ここに表示されます</div>
+      <button class="btn-ghost" style="max-width:220px;margin:0 auto;display:block;touch-action:manipulation;" onclick="S.tab='words';render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='words'))">単語帳へ 📚</button>
+    </div>`;
+  }
+  if(!S.qSess||!S.qSess.length||S.qSessLang!==S.lang||S.qSess.some(q=>reviewed.has('q-'+q.id))){
+    S.qSess=buildQSess(S.lang).filter(q=>!reviewed.has('q-'+q.id));
+    S.qSessLang=S.lang;S.qIdx=0;S.qAns=null;S.qScore={c:0,t:0};
+  }
+  if(S.qIdx>=S.qSess.length){
+    // Session done - show completion
+    const pct=Math.round(S.qScore.c/(S.qScore.t||1)*100);
+    const remaining=v.filter(w=>!reviewedTodaySet().has('q-'+w.id));
+    return`<div style="text-align:center;padding:32px 20px">
+      <div style="font-size:56px;margin-bottom:16px">${pct>=80?'🎉':pct>=60?'😊':'💪'}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;color:var(--tx)">今日の復習完了！</div>
+      <div style="font-size:15px;color:var(--tx2);margin-bottom:24px">正解 ${S.qScore.c}/${S.qScore.t} (${pct}%)</div>
+      ${remaining.length?`<div style="font-size:13px;color:var(--tx3);margin-bottom:16px">新しい単語が ${remaining.length} 語あります</div><button class="btn" style="max-width:280px;margin:0 auto 12px;display:block;touch-action:manipulation;" onclick="S.qSess=null;render()">新単語を続ける 🆕</button>`:'<div style="font-size:13px;color:var(--tx3);margin-bottom:16px">全単語の復習が完了しました ✓</div>'}
+      <button class="btn-ghost" style="max-width:280px;margin:0 auto;display:block;touch-action:manipulation;" onclick="S.tab='words';render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='words'))">終了 🌙</button>
+    </div>`;
+  }
+  const qs=S.qSess,q=qs[S.qIdx];
   const ml={meaning:'単語→意味',word:'意味→単語',reading:'発音→単語'}[q.qMode]||'';
   return`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <span style="font-size:13px;color:var(--tx2);font-weight:500">正解 ${S.qScore.c}/${S.qScore.t}</span>
       <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;color:var(--tx3)">${ml}</span>
     </div>
-    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qIdx/(qs.length||1)*100)}%"></div></div>
     <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;text-transform:uppercase">${{meaning:'どういう意味？',word:'どの単語？',reading:'発音を聞いて選ぶ'}[q.qMode]||''}</div>
       ${q.question==='__AUDIO__'
-        ?`<div style="text-align:center"><button onclick="speak('${(q.data.word||'').replace(/'/g,"\\\'")}\ ','${q.lang}')" class="spk-lg">▶ 発音を聞く</button></div>`
+        ?`<div style="text-align:center"><button onclick="speak('${(q.data.word||'').replace(/'/g,"\\\'")}','${q.lang}')" class="spk-lg">▶ 発音を聞く</button></div>`
         :`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <span style="font-size:${q.qMode==='meaning'?'22':'18'}px;font-weight:800;color:var(--tx)">${q.question}</span>
           ${q.qMode==='meaning'?spkH(q.data.word,q.lang):''}
@@ -1280,7 +1310,11 @@ function quizH(){
     }).join('')}`;
 }
 function quizAns(ok,i){if(S.qAns!==null)return;S.qAns=i;S.qScore={c:S.qScore.c+ok,t:S.qScore.t+1};S.qFb=ok?'correct':'wrong';render();}
-function quizNext(){S.qIdx++;S.qAns=null;S.qFb=null;render();}
+function quizNext(){
+  const q=S.qSess&&S.qSess[S.qIdx];
+  if(q){markReviewedTodayKey('q-'+q.id);}
+  S.qIdx++;S.qAns=null;S.qFb=null;render();
+}
 function flashAns(ok){flashAnsAnki(ok?3:0);}
 
 // ════════════════════════
@@ -1644,7 +1678,7 @@ function statsH(){
   const lv={};ws.forEach(w=>{const k=w.data&&(w.data.jlpt||w.data.delf);if(k)lv[k]=(lv[k]||0)+1;});
   // 作文統計
   const essays=(S.wHistory||[]).filter(e=>e.lang===S.lang);
-  const essayCount=new Set(essays.map(e=>e.essayId||e.date)).size;
+  const essayCount=essays.filter(e=>!e.revNum||e.revNum===1).length;
   const avgScore=essays.filter(e=>e.score).length?Math.round(essays.filter(e=>e.score).reduce((s,e)=>s+e.score,0)/essays.filter(e=>e.score).length*10)/10:0;
   // 造句統計
   let totalSentences=0;
