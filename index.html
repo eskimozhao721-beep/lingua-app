@@ -1255,7 +1255,7 @@ function flashH(){
       <button class="btn-ghost" style="max-width:280px;margin:0 auto;display:block;touch-action:manipulation;" onclick="S.tab='words';render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='words'))">終了 🌙</button>
     </div>`;
   }
-  const w=S.fSess[S.fIdx],pct=Math.round(S.fIdx/S.fSess.length*100);
+  const w=S.fSess[S.fIdx],pct=Math.round((S.fIdx+1)/S.fSess.length*100);
   const sm2=w.sm2||{},ni=sm2.interval||1;
   const lastRev=w.lastReviewed?new Date(w.lastReviewed).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'初回';
   const nextRev=sm2.nextReview?new Date(sm2.nextReview).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'今日';
@@ -1332,7 +1332,7 @@ function quizH(){
       <button class="btn-ghost" style="max-width:220px;margin:0 auto;display:block;touch-action:manipulation;" onclick="S.tab='words';render();document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='words'))">単語帳へ 📚</button>
     </div>`;
   }
-  if(!S.qSess||!S.qSess.length||S.qSessLang!==S.lang||S.qSess.some(q=>reviewed.has('q-'+q.id))){
+  if(!S.qSess||!S.qSess.length||S.qSessLang!==S.lang){
     S.qSess=buildQSess(S.lang).filter(q=>!reviewed.has('q-'+q.id));
     S.qSessLang=S.lang;S.qIdx=0;S.qAns=null;S.qScore={c:0,t:0};
   }
@@ -1355,7 +1355,7 @@ function quizH(){
       <span style="font-size:13px;color:var(--tx2);font-weight:500">正解 ${S.qScore.c}/${S.qScore.t}</span>
       <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;color:var(--tx3)">${ml}</span>
     </div>
-    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round((S.qIdx+1)/(qs.length||1)*100)}%"></div></div>
     <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;text-transform:uppercase">${{meaning:'どういう意味？',word:'どの単語？',reading:'発音を聞いて選ぶ'}[q.qMode]||''}</div>
       ${q.question==='__AUDIO__'
