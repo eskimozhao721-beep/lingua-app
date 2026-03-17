@@ -1311,7 +1311,7 @@ function writingH(){
   if(S.wView==='histDetail')return writingHistDetailH();
   const {topic,topics,ti}=getWritingTopic();
   if(S.wView==='result'&&S.wResult)return writingResultH(topic);
-  if(S.wFullscreen)return fullscreenH(topic);
+  if(S.wFullscreen)return'';
   const myEssays=S.wHistory.filter(e=>e.lang===S.lang);
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1996,6 +1996,7 @@ function showApp(){
         </div>
       </div>
       <div class="screen" id="screen"></div>
+      <div id="fs-mount"></div>
       <nav class="navbar">
         <div class="nav-item active" data-tab="words" onclick="switchTab('words')">
           <span class="nav-icon">
@@ -2024,6 +2025,12 @@ function showApp(){
 
 function render(){
   const sc=document.getElementById('screen');if(!sc)return;
+  const fm=document.getElementById('fs-mount');
+  if(S.tab==='writing'&&S.wFullscreen){
+    if(fm)fm.innerHTML=fullscreenH(getWritingTopic().topic);
+    return;
+  }
+  if(fm)fm.innerHTML='';
   if(S.tab==='words'){
     if(S.view==='list')sc.innerHTML=wordsListH();
     else if(S.view==='detail')sc.innerHTML=detailH();
