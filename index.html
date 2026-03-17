@@ -342,9 +342,9 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch{}};
 // ── App state ──
 let U={email:'',sk:''};
 let S={
-  tab:'words',lang:'fr',view:'list',sel:null,sortMode:'time',
+  tab:'words',lang:'fr',view:'list',wordsView:'words',sel:null,sortMode:'time',
   enabledLangs:{fr:true,ja:true,en:false},
-  tense:'present',wDifficulty:'B1',sortDir:'desc',fSentenceMode:false,fSentenceInput:'',fSentenceResult:null,fSentenceErr:'',fSentenceLoading:false,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,wDifficulty:'B1',sortDir:'desc',detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,
+  tense:'present',wDifficulty:'B1',sortDir:'asc',fSentenceMode:false,fSentenceInput:'',addExample:'',fSentenceResult:null,fSentenceErr:'',fSentenceLoading:false,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,wDifficulty:'B1',sortDir:'desc',detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,
   // add
   addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',
   // practice
@@ -401,13 +401,16 @@ function tomorrowStr(){
 }
 
 // ── API call (writing correction only) ──
-async function callApi(prompt,max=1000){
+async function callApi(prompt,max=1000,model='claude-haiku-4-5-20251001'){
   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,
+    body:JSON.stringify({model,max_tokens:max,
       messages:[{role:'user',content:prompt}]})});
   const d=await r.json();
   if(d.error)throw new Error(d.error.message);
   return d.content.map(i=>i.text||'').join('');
+}
+async function callApiSonnet(prompt,max=1000){
+  return callApi(prompt,max,'claude-sonnet-4-20250514');
 }
 
 // ═══════════════════════
@@ -429,7 +432,36 @@ async function lookupJa(word){
   return{word:jp.word||word,reading:jp.reading||'',meanings:allSenses[0]?.text||'',allSenses,jlpt,delf:null,source:'Jisho'};
 }
 
+// ── French accent normalization ──
+// Maps no-accent input to possible accented versions for retry
+const FR_ACCENT_MAP={'e':['é','è','ê','ë'],'a':['à','â','ä'],'u':['ù','û','ü'],'i':['î','ï'],'o':['ô','ö'],'c':['ç']};
+
+function normalizeFrInput(word){
+  // Already has accents? return as-is
+  if(/[éèêëàâäùûüîïôöç]/i.test(word))return[word];
+  // Generate candidates by replacing unaccented vowels
+  const candidates=new Set([word]);
+  // Most common: e→é (partir stays, demenager→déménager)
+  let v=word.replace(/e/gi,m=>m==='E'?'É':'é');
+  if(v!==word)candidates.add(v);
+  // Try common patterns: de->dé, me->mé, e at word start
+  candidates.add(word.replace(/^de/i,'dé').replace(/me/gi,'mé').replace(/e(?=[mnlrst])/gi,'é'));
+  return[...candidates].filter(Boolean);
+}
+
 async function lookupFr(word){
+  const candidates=normalizeFrInput(word);
+  let lastErr=null;
+  for(const candidate of candidates){
+    try{
+      const result=await _lookupFrRaw(candidate);
+      if(result)return result;
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error('見つかりません');
+}
+
+async function _lookupFrRaw(word){
   // Try zh.wiktionary for Chinese definitions
   try{
     const r=await fetch('https://zh.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
@@ -500,7 +532,7 @@ function buildPrompt(word,meaning,lang,pos){
   if(lang==='fr'){
     const gp=nn?',"gender":{"masc":"","fem":null,"mascPl":"","irregular":false}':',"gender":null';
     const cp=vb?',"conjugations":'+FR_CONJ:',"conjugations":null';
-    return `FR「${word}」(${meaning})。JSON only:{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
+    return `法语单词「${word}」意思(${meaning})。只返回JSON,不要解释:{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"中文1句语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
   }
   if(lang==='ja'){
     const cp=vb?',"conjugations":'+JA_CONJ:',"conjugations":null';
@@ -550,11 +582,11 @@ function spkH(t,l,lb){
   return`<button class="spk-btn" onclick="speak('${e}','${l}')">▶${lb?' '+lb:''}</button>`;
 }
 function sorted(){
-  const v=S.words.filter(w=>w.lang===S.lang);
+  const v=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
   const dir=(S.sortDir||'desc')==='asc'?1:-1;
   if(S.sortMode==='mastery'||S.sortMode==='added')return v.slice().sort((a,b)=>dir*((b.reviewCount||0)-(a.reviewCount||0)));
   if(S.sortMode==='level')return v.slice().sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99)));
-  return v.slice().sort((a,b)=>dir*(b.addedAt-a.addedAt));
+  return v.slice().sort((a,b)=>-dir*(b.addedAt-a.addedAt));
 }
 
 // ── Navigation ──
@@ -584,10 +616,18 @@ function wordsListH(){
       <div style="font-size:13px;color:var(--tx2);font-weight:500">${LANG[S.lang]?.flag} ${words.length}語</div>
     </div>
     
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="S.wordsView='words';render()" style="flex:1;padding:8px;border-radius:var(--r);border:1.5px solid ${S.wordsView!=='sentences'?'var(--g)':'var(--bd)'};background:${S.wordsView!=='sentences'?'var(--gl)':'transparent'};color:${S.wordsView!=='sentences'?'var(--gd)':'var(--tx2)'};font-size:13px;font-weight:${S.wordsView!=='sentences'?'700':'500'};cursor:pointer;font-family:inherit;touch-action:manipulation;">
+        📚 単語 ${words.filter(w=>!w.isSentence).length}
+      </button>
+      <button onclick="S.wordsView='sentences';render()" style="flex:1;padding:8px;border-radius:var(--r);border:1.5px solid ${S.wordsView==='sentences'?'var(--g)':'var(--bd)'};background:${S.wordsView==='sentences'?'var(--gl)':'transparent'};color:${S.wordsView==='sentences'?'var(--gd)':'var(--tx2)'};font-size:13px;font-weight:${S.wordsView==='sentences'?'700':'500'};cursor:pointer;font-family:inherit;touch-action:manipulation;">
+        📖 例句 ${words.filter(w=>w.isSentence).length}
+      </button>
+    </div>
     <button class="add-btn" onclick="setView('add')">
       <span style="font-size:16px">＋</span> 新しい単語を追加
     </button>
-    <div class="sort-bar">
+    <div class="sort-bar" ${S.wordsView==='sentences'?'style="display:none"':''}>
       ${[['time','追加順'],['mastery','⭐ 習得度'],['level','難易度']].map(([k,l])=>{const a=S.sortMode===k;const ar=a?((S.sortDir||'desc')==='asc'?' ↑':' ↓'):'';return`<button class="sort-btn${a?' active':''}" onclick="if(S.sortMode==='${k}'){S.sortDir=(S.sortDir||'desc')==='desc'?'asc':'desc';}else{S.sortMode='${k}';S.sortDir='desc';}render()">${l}${ar}</button>`;}).join('')}
     </div>
     ${words.length===0?`<div class="empty-state">
@@ -606,7 +646,7 @@ function wordsListH(){
         ontouchstart="swipeStart(event,'${w.id}')"
         ontouchend="swipeEnd(event,'${w.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
-          <div style="font-size:19px;font-weight:700;color:var(--tx)">${w.data.word}</div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="font-size:19px;font-weight:700;color:var(--tx)">${w.data.word}</div>${w.isSentence?'<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--gl);color:var(--gd);font-weight:600;flex-shrink:0">📖 例句</span>':''}</div>
           <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">${lvH(w.data)}${w.mastered?'<span class="mastered-badge">✓ 習得</span>':''}</div>
         </div>
         ${w.data.reading?`<div style="font-size:13px;color:${G};margin-bottom:3px;font-weight:500">${w.data.reading}</div>`:''}
@@ -633,21 +673,46 @@ function genderH(g){
 // ════════════════════════
 // ➕ ADD WORD
 // ════════════════════════
+function normalizeFrInput(raw){
+  return raw.replace(/\s+/g,'');
+}
 async function doLookup(){
   const inp=document.getElementById('addInput');
-  const word=(inp?.value||S.addInput).trim();
-  if(!word)return;
-  // 重複チェック
+  let raw=(inp?.value||S.addInput).trim();
+  if(!raw)return;
+  let word=raw.replace(/\s+/g,'');
+  if(inp&&word!==raw)inp.value=word;
+  S.addInput=word;
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
-  S.addInput=word;S.addLoading=true;S.addResult=null;S.addErr='';render();
+  S.addLoading=true;S.addResult=null;S.addErr='';render();
   try{
-    S.addResult=S.lang==='ja'?await lookupJa(word):S.lang==='fr'?await lookupFr(word):await lookupEn(word);
+    if(S.lang==='fr'){
+      let result=await lookupFr(word);
+      if(!result){
+        try{
+          S.addErr='アクセント記号を確認中...';render();
+          const corrected=await callApi('フランス語の単語「'+word+'」の正しいスペル（アクセント記号込み）を単語のみ返してください：',30);
+          const fixed=corrected.trim().replace(/\s/g,'');
+          if(fixed&&fixed.toLowerCase()!==word.toLowerCase()){
+            S.addErr='「'+word+'」→「'+fixed+'」で再検索...';render();
+            result=await lookupFr(fixed);
+            if(result)word=fixed;
+          }
+        }catch(e2){}
+      }
+      if(!result)throw new Error('「'+word+'」が見つかりません。スペルを確認してください。');
+      S.addResult=result;
+    }else if(S.lang==='ja'){
+      S.addResult=await lookupJa(word);
+    }else{
+      S.addResult=await lookupEn(word);
+    }
   }catch(e){S.addErr=e.message||'見つかりませんでした';}
   S.addLoading=false;render();
-  // Restore input focus & value
   setTimeout(()=>{const i=document.getElementById('addInput');if(i){i.value=word;i.focus();}},30);
 }
+
 
 function addH(){
   const r=S.addResult;
@@ -672,7 +737,22 @@ function addH(){
         ${S.addLoading?'<span class="loading-pulse">検索中</span>':' 検索'}
       </button>
     </div>
-    ${S.addErr?`<div class="err-msg">${S.addErr}</div>`:''}
+    ${S.addErr?`
+      <div class="err-msg">${S.addErr}</div>
+      <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;margin-top:12px">
+        <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:10px">📝 手動で直接追加</div>
+        <input class="inp" id="manualMeaning" placeholder="中文释义（必须）" style="margin-bottom:8px">
+        <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':'発音（任意）'}" style="margin-bottom:8px">
+        <input class="inp" id="manualExample" placeholder="例句（任意）" style="margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="manualIsSentence" style="width:16px;height:16px;accent-color:var(--g)">
+          <span style="font-size:13px;color:var(--tx)">📖 例句として登録（練習には出ない）</span>
+        </label>
+        <div style="display:flex;gap:8px">
+          <button onclick="manualAdd()" style="flex:1;padding:11px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">＋ 追加する</button>
+        </div>
+      </div>
+    `:''}
     ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
     ${r?addPreviewH(r):''}`;
 }
@@ -697,8 +777,15 @@ function addPreviewH(r){
         </div>`).join('')}
       </div>
       <div style="font-size:12px;color:var(--tx3);margin-bottom:8px;font-weight:500">中国語でメモ（任意）</div>
-      <input class="inp" id="addMemo" placeholder="例：吃 / 离开，出发" style="margin-bottom:14px"
+      <input class="inp" id="addMemo" placeholder="中文释义（可选，覆盖默认）" style="margin-bottom:8px"
         oninput="S.addMemo=this.value" value="${(S.addMemo||'').replace(/"/g,'&quot;')}">
+      <input class="inp" id="addExample" placeholder="例句（可选，如：Je vais partir demain.）" style="margin-bottom:10px"
+        oninput="S.addExample=this.value" value="${(S.addExample||'').replace(/"/g,'&quot;')}">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;padding:10px 12px;background:var(--bg2);border-radius:var(--r-sm);border:1.5px solid var(--bd)">
+        <input type="checkbox" id="addIsSentence" style="width:16px;height:16px;accent-color:var(--g);cursor:pointer">
+        <span style="font-size:13px;font-weight:500;color:var(--tx)">📖 例句として登録</span>
+        <span style="font-size:11px;color:var(--tx3);margin-left:auto">練習には出ない</span>
+      </label>
       ${S.addAiLoading?`
         <div style="background:var(--amberb);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px">
           <div class="loading-pulse" style="font-size:14px;color:var(--amber);font-weight:600">⚡ AIが詳細情報を生成中...</div>
@@ -714,6 +801,29 @@ function addPreviewH(r){
     </div>`;
 }
 
+function manualAdd(){
+  const word=S.addInput.trim();
+  if(!word){showToast('単語を入力してください');return;}
+  const meaning=(document.getElementById('manualMeaning')?.value||'').trim();
+  if(!meaning){showToast('中文释义を入力してください');return;}
+  const reading=(document.getElementById('manualReading')?.value||'').trim();
+  const exText=(document.getElementById('manualExample')?.value||'').trim();
+  const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
+  if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
+  const examples=exText?[{text:exText,trans:''}]:[];
+  const isSentenceEntry=(document.getElementById('manualIsSentence')?.checked)||false;
+  const nw={id:Date.now().toString(),word,lang:S.lang,isSentence:isSentenceEntry,
+    data:{word,reading,meaning,
+      delf:S.lang==='fr'?null:null,jlpt:S.lang==='ja'?null:null,
+      gender:null,pluralNote:null,examples,grammar:'',related:'',
+      wordFamily:[],conjugations:null,collocations:[],
+      source:'手動',allSenses:[{text:meaning}],aiEnriched:false},
+    reviewCount:0,mastered:false,addedAt:Date.now()};
+  S.words=[nw,...S.words];saveWords();
+  const p=word.length>20?word.slice(0,20)+'…':word;
+  S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';
+  showToast('✓「'+p+'」を追加しました');setView('list');
+}
 function quickAdd(){
   const r=S.addResult;if(!r)return;
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===r.word.toLowerCase());
@@ -773,7 +883,7 @@ async function confirmAdd(){
       saveWords();
     }
   }catch(e){console.warn('AI enrichment failed:',e.message);}
-  S.addAiLoading=false;S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';
+  S.addAiLoading=false;S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';
   celebrate();setView('list');
 }
 
@@ -863,6 +973,12 @@ function conjH(c,lang){
   }
   // French
   const nm={present:'Présent',passe:'Passé composé',imparfait:'Imparfait',futur:'Futur simple'};
+  // Detect verb stem (词根提示) from present tense nous form
+  let stemHint='';
+  if(c.present&&c.present[3]){
+    const nousForm=c.present[3].f||'';
+    if(nousForm.endsWith('ons')){const stem=nousForm.slice(0,-3);stemHint=`<div style="font-size:12px;color:var(--g);background:var(--gl);padding:4px 10px;border-radius:6px;margin-bottom:8px;display:inline-block">📌 词根: <b>${stem}-</b></div>`;}
+  }
   const ts=Object.keys(c);if(!ts.length)return'';
   if(!c[S.tense])S.tense=ts[0];
   return`<div class="sec-lbl">動詞活用</div>
@@ -1193,7 +1309,7 @@ async function doWriting(){
   const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
   try{
     const diffNote={A1:'A1初级',A2:'A2基础',B1:'B1中级',B2:'B2中高级'}[S.wDifficulty||'B1'];
-    const t=await callApi(`你是专业${langName}教师(${diffNote})。添削作文主题「${topic.title}」：\\
+    const t=await callApiSonnet(`你是专业${langName}教师(${diffNote})。添削作文主题「${topic.title}」：\\
 \\
 ${txt.trim()}\\
 \\
@@ -1769,7 +1885,7 @@ function render(){
 
 function setView(v){
   S.view=v;
-  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addAiLoading=false;}
+  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';S.addAiLoading=false;}
   if(v==='list')S.sel=null;
   render();
 }
@@ -1923,7 +2039,7 @@ function getDistractors(correctWord,lang,count=3){
   return pool.sort(()=>Math.random()-.5).slice(0,count);
 }
 function buildQSess(lang){
-  const v=S.words.filter(w=>w.lang===lang);if(!v.length)return[];
+  const v=S.words.filter(w=>w.lang===lang&&!w.isSentence);if(!v.length)return[];
   const due=v.filter(w=>isDueForReview(w)).sort(()=>Math.random()-.5);
   const notDue=v.filter(w=>!isDueForReview(w));
   return[...due,...notDue].map(w=>{
