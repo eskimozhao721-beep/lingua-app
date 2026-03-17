@@ -877,42 +877,91 @@ function practiceH(){
 }
 
 function flashH(){
-  if(!S.fSess.length)return`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px"></div><div style="font-weight:600;color:var(--tx)">単語がありません</div><div>単語帳から追加しましょう</div></div>`;
+  if(!S.fSess.length)return`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📚</div><div style="font-weight:600;color:var(--tx)">単語がありません</div><div>単語帳から追加しましょう</div></div>`;
   if(S.fDone){
     const ok=S.fSess.filter(w=>w._ok).length;
-    return`<div style="text-align:center;padding:40px 0">
-      <div style="font-size:60px;margin-bottom:16px"></div>
-      <div style="font-size:24px;font-weight:800;margin-bottom:8px;color:var(--tx)">完了！</div>
-      <div style="font-size:15px;color:var(--tx2);margin-bottom:24px">${ok}/${S.fSess.length}枚正解</div>
-      <div style="font-size:28px;font-weight:800;color:${G};margin-bottom:24px">${Math.round(ok/S.fSess.length*100)}%</div>
-      <button class="btn" onclick="resetP();render()">もう一度</button>
+    const pct=Math.round(ok/S.fSess.length*100);
+    return`<div style="text-align:center;padding:32px 20px">
+      <div style="font-size:56px;margin-bottom:16px">${pct>=80?'🎉':pct>=60?'😊':'💪'}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;color:var(--tx)">ラウンド完了！</div>
+      <div style="font-size:15px;color:var(--tx2);margin-bottom:6px">${ok}/${S.fSess.length}枚正解</div>
+      <div style="font-size:36px;font-weight:800;color:${G};margin-bottom:20px">${pct}%</div>
+      <div style="display:flex;gap:10px;max-width:300px;margin:0 auto">
+        <button class="btn-ghost" style="flex:1" onclick="S.pStopToday=true;render()">終了 🌙</button>
+        <button class="btn" style="flex:1" onclick="resetP();render()">もう一周 🔄</button>
+      </div>
     </div>`;
   }
   const w=S.fSess[S.fIdx];
   const pct=Math.round(S.fIdx/S.fSess.length*100);
+  const sm2=w.sm2||{};
+  const reviewCount=w.reviewCount||0;
+  const lastRev=w.lastReviewed?new Date(w.lastReviewed).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'初回';
+  const nextRev=sm2.nextReview?new Date(sm2.nextReview).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'今日';
+  const nextInterval=sm2.interval||1;
   return`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <span style="font-size:13px;color:var(--tx2);font-weight:500">${S.fIdx+1}/${S.fSess.length}</span>
-      <span style="font-size:13px;color:var(--tx2);font-weight:500">${pct}%</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--tx3)">${pct}%</span>
+        <button onclick="toggleSentenceMode()" style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid ${S.fSentenceMode?G:'var(--bd)'};background:${S.fSentenceMode?'var(--gl)':'transparent'};color:${S.fSentenceMode?'var(--gd)':'var(--tx3)'};cursor:pointer;font-family:inherit;font-weight:600;touch-action:manipulation;">✏️ 造句${S.fSentenceMode?' ON':''}</button>
+      </div>
     </div>
     <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-    <div class="flash-card" onclick="S.fFlip=!S.fFlip;render()">
-      <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:12px">${tagH(w.lang)} ${lvH(w.data)}</div>
+    ${S.fSentenceMode?`
+      <div class="flash-card" style="cursor:default;min-height:160px">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:10px">
+          ${tagH(w.lang)} ${lvH(w.data)}
+          <button onclick="goToWordDetail('${w.id}','practice')" style="font-size:10px;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx3);font-family:inherit;touch-action:manipulation;">詳細</button>
+        </div>
+        <div style="font-size:34px;font-weight:800;color:var(--tx);margin-bottom:6px">${w.data.word}</div>
+        ${w.data.reading?`<div style="font-size:15px;color:${G};margin-bottom:4px;font-weight:500">${w.data.reading}</div>`:''}
+        <div style="font-size:13px;color:var(--tx2)">${w.data.meaning}</div>
+      </div>
+      ${sentencePracticeH(w,sentenceCountToday(w.id),sentenceCountToday(w.id)<10)}
+    `:`
+      <div class="flash-card" onclick="${S.fFlip?'':' S.fFlip=true;S.fCardShown=(S.fCardShown||0)+1;render()'}" style="${S.fFlip?'cursor:default':'cursor:pointer'}">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:10px">
+          ${tagH(w.lang)} ${lvH(w.data)}
+          <button onclick="event.stopPropagation();goToWordDetail('${w.id}','practice')" style="font-size:10px;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx3);font-family:inherit;touch-action:manipulation;">詳細</button>
+        </div>
+        ${S.fFlip?`
+          <div style="font-size:36px;font-weight:800;color:var(--tx);margin-bottom:8px;letter-spacing:-.02em">${w.data.word}</div>
+          <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">
+            ${w.data.reading?`<span style="font-size:17px;color:${G};font-weight:600">${w.data.reading}</span>`:''}
+            ${spkH(w.data.word,w.lang)}
+          </div>
+          <div style="font-size:15px;color:var(--tx2);margin-bottom:6px;line-height:1.6;max-width:280px;text-align:center">${w.data.meaning}</div>
+          ${w.data.examples&&w.data.examples.length?`<div style="font-size:13px;color:var(--tx3);font-style:italic;max-width:280px;text-align:center">${w.data.examples[0].text}</div>`:''}
+        `:`
+          <div style="font-size:42px;font-weight:800;margin:12px 0 10px;color:var(--tx);letter-spacing:-.02em">${w.data.word}</div>
+          <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>
+        `}
+      </div>
+      <div style="display:flex;justify-content:center;margin-bottom:${S.fFlip?'8':'12'}px">
+        <button onclick="speak('${(w.data.word||'').replace(/'/g,"\'")}','${w.lang}')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:14px;cursor:pointer;font-family:inherit;color:var(--tx);font-weight:500;touch-action:manipulation;">▶ 発音を聞く</button>
+      </div>
       ${S.fFlip?`
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">意味・読み</div>
-        <div style="font-size:28px;font-weight:700;margin-bottom:8px;color:var(--tx)">${w.data.meaning}</div>
-        ${w.data.reading?`<div style="font-size:16px;color:${G};margin-bottom:14px;font-weight:500">${w.data.reading}</div>`:''}
-        ${spkH(w.data.word,w.lang,'発音を聞く')}
-      `:`
-        <div style="font-size:40px;font-weight:800;margin:12px 0 10px;color:var(--tx);letter-spacing:-.02em">${w.data.word}</div>
-        <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>
-      `}
-    </div>
-    ${S.fFlip?`<div class="flash-actions">
-      <button class="btn-wrong" onclick="flashAns(false)">✗ もう一度</button>
-      <button class="btn-correct" onclick="flashAns(true)">✓ 覚えた！</button>
-    </div>`:''}`;
+        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:10px;display:flex;justify-content:center;gap:14px">
+          <span>📅 前回: ${lastRev}</span>
+          <span>🔄 ${reviewCount}回</span>
+          <span>⏭ 次回: ${nextRev}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <button onclick="flashAnsAnki(0)" style="padding:12px 6px;background:#FFEBEE;color:#C62828;border:1px solid rgba(198,40,40,0.2);border-radius:12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;line-height:1.4">
+            😵 完全忘れ<br><span style="font-size:10px;font-weight:400">1日後</span>
+          </button>
+          <button onclick="flashAnsAnki(1)" style="padding:12px 6px;background:#FFF3E0;color:#E65100;border:1px solid rgba(230,81,0,0.2);border-radius:12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;line-height:1.4">
+            😅 難しい<br><span style="font-size:10px;font-weight:400">${Math.max(1,Math.round(nextInterval*0.5))}日後</span>
+          </button>
+          <button onclick="flashAnsAnki(3)" style="padding:12px 6px;background:#E8F5E9;color:#2E7D32;border:1px solid rgba(46,125,50,0.2);border-radius:12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;line-height:1.4">
+            😊 記憶した<br><span style="font-size:10px;font-weight:400">${nextInterval}日後</span>
+          </button>
+        </div>
+      `:''}
+    `}`;
 }
+
 
 function quizH(){
   const v=S.words.filter(w=>w.lang===S.lang);
