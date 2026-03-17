@@ -509,7 +509,10 @@ function speak(text,lang){
 const activeLangs=()=>Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])=>k);
 function tagH(l){return`<span class="tag tag-${l}">${LANG[l]?.flag||''} ${LANG[l]?.label?.slice(0,2)||l}</span>`;}
 function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
-function spkH(t,l,lb=''){const e=t.replace(/\\/g,'\\\\\').replace(/'/g,"\\\'");return`<button class="spk-btn" onclick="speak('${e}','${l}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>${lb?' '+lb:''}</button>`;}
+function spkH(t,l,lb){
+  const e=(t||'').replace(/'/g,"\'");
+  return`<button class="spk-btn" onclick="speak('${e}','${l}')">▶${lb?' '+lb:''}</button>`;
+}
 function celebrate(){
   ['','✨','','',''].forEach((em,i)=>setTimeout(()=>{
     const el=document.createElement('div');el.className='celebrate';el.textContent=em;
@@ -913,34 +916,49 @@ function flashH(){
 
 function quizH(){
   const v=S.words.filter(w=>w.lang===S.lang);
-  if(v.length<2)return`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px"></div><div style="font-weight:600;color:var(--tx)">単語が2つ以上必要です</div></div>`;
-  const qs=v.map(w=>{
-    const oth=v.filter(o=>o.id!==w.id).sort(()=>Math.random()-.5).slice(0,3);
-    const opts=[{text:w.data.meaning,correct:true},...oth.map(o=>({text:o.data.meaning,correct:false}))].sort(()=>Math.random()-.5);
-    return{...w,opts};
-  });
+  if(!v.length)return'<div class="empty-state"><div style="font-size:36px;margin-bottom:12px">📝</div><div>単語を追加してください</div></div>';
+  // 選択肢を固定：セッション開始時のみ生成
+  if(!S.qSess||!S.qSess.length||S.qSessLang!==S.lang){
+    S.qSess=buildQSess(S.lang);
+    S.qSessLang=S.lang;
+  }
+  const qs=S.qSess;
   const q=qs[S.qIdx%qs.length];
+  const modeLabel={meaning:'単語 → 意味',word:'意味 → 単語',reading:'発音 → 単語'}[q.qMode]||'';
   return`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <span style="font-size:13px;color:var(--tx2);font-weight:500">正解 ${S.qScore.c}/${S.qScore.t}</span>
-      ${tagH(q.lang)}
+      <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;color:var(--tx3)">${modeLabel}</span>
     </div>
     <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
     <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:14px">
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">どういう意味ですか？</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <span style="font-size:24px;font-weight:800;color:var(--tx)">${q.data.word}</span>
-        ${lvH(q.data)}${spkH(q.data.word,q.lang)}
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">
+        ${{meaning:'どういう意味？',word:'どの単語？',reading:'発音を聞いて選ぶ'}[q.qMode]||''}
       </div>
-      ${q.data.reading?`<div style="font-size:14px;color:${G};font-weight:500">${q.data.reading}</div>`:''}
+      ${q.question==='__AUDIO__'?`
+        <div style="text-align:center;margin-bottom:8px">
+          <button onclick="speak('${(q.data.word||'').replace(/'/g,"\'")}','${q.lang}')" class="spk-lg">▶ 発音を聞く</button>
+        </div>
+      `:`
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:${q.qMode==='meaning'?'22':'18'}px;font-weight:800;color:var(--tx)">${q.question}</span>
+          ${q.qMode==='meaning'?spkH(q.data.word,q.lang):''}
+        </div>
+        ${q.questionSub?`<div style="font-size:13px;color:var(--g);font-weight:500">${q.questionSub}</div>`:''}
+      `}
     </div>
-    ${S.qFb?`<div class="quiz-fb ${S.qFb}">${S.qFb==='correct'?'✓ 正解！':'✗ 不正解'}</div>`:''}
+    ${S.qAns!==null?`
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
+        <button onclick="goToWordDetail('${q.id}','practice')" style="font-size:12px;padding:6px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2);touch-action:manipulation;">詳細</button>
+        <button onclick="quizNext()" style="padding:8px 20px;background:var(--n);color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;">次へ →</button>
+      </div>`:''}
     ${q.opts.map((opt,i)=>{
       let cls='quiz-opt';
       if(S.qAns!==null){if(opt.correct)cls+=' correct';else if(i===S.qAns)cls+=' wrong';}
-      return`<button class="${cls}" ${S.qAns!==null?'disabled':''} onclick="quizAns(${opt.correct?1:0},${i})">${opt.text}</button>`;
+      return`<button class="${cls}" ${S.qAns!==null?'disabled':''} onclick="quizAns(${opt.correct?1:0},${i})" style="touch-action:manipulation;"><span>${opt.text}</span></button>`;
     }).join('')}`;
 }
+
 
 function quizAns(ok,i){
   if(S.qAns!==null)return;
@@ -1312,7 +1330,7 @@ function toggleLang(code){
 // ════════════════════════
 function setupH(){
   const any=Object.values(S.enabledLangs).some(v=>v);
-  return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100svh;padding:40px 28px;background:#0F172A;position:relative;overflow:hidden">
+  return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100svh;padding:40px 28px;background:var(--n);position:relative;overflow:hidden">
     <div style="margin-bottom:24px">${logoFull()}</div>
     <div style="font-size:26px;font-weight:800;color:var(--tx);margin-bottom:6px;text-align:center;letter-spacing:-.02em">Lingua</div>
     <div style="font-size:16px;font-weight:600;color:var(--tx);margin-bottom:6px;text-align:center">学習する言語を選んでください</div>
@@ -1350,17 +1368,49 @@ function finishSetup(){
 //  AUTH
 // ════════════════════════
 function showLogin(){
-  document.getElementById('root').innerHTML=`
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100svh;padding:40px 28px;background:var(--bg)">
-      <div style="position:absolute;inset:0;background-image:url('./splash.jpg');background-size:cover;background-position:center;opacity:0.35;"></div><div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:320px"><div style="margin-bottom:24px">${logoLoginFull()}</div>
-      <div style="font-size:26px;font-weight:800;color:var(--tx);margin-bottom:6px;letter-spacing:-.02em">Lingua</div>
-      <div style="font-size:15px;color:var(--tx2);margin-bottom:32px;text-align:center;line-height:1.7">メールアドレスで<br>あなた専用の単語帳を作ろう</div>
-      <input id="lEmail" class="inp" type="email" placeholder="your@email.com" style="margin-bottom:10px;max-width:320px;width:100%;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff;">
-      <div id="lErr" style="font-size:13px;color:var(--red);min-height:16px;margin-bottom:10px"></div>
-      <button class="btn" style="max-width:320px" onclick="doLogin()">ログイン / 新規作成</button>
-      <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center">パスワード不要 · このデバイスのみに保存</div></div>
+  const root=document.getElementById('root');
+  root.innerHTML=`
+    <div id="splash-wrap" style="position:fixed;inset:0;z-index:100;">
+      <img src="./splash.jpg" style="width:100%;height:100%;object-fit:cover;display:block;">
+    </div>
+    <div id="login-wrap" style="opacity:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:40px 28px;background:#0F172A;">
+      <div style="margin-bottom:24px">${logoLoginFull()}</div>
+      <div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-.02em">Lingua</div>
+      <div style="font-size:15px;color:rgba(255,255,255,0.55);margin-bottom:40px;text-align:center;line-height:1.7">メールアドレスで<br>あなた専用の単語帳を作ろう</div>
+      <input id="lEmail" class="inp" type="email" placeholder="your@email.com"
+        style="margin-bottom:10px;max-width:320px;width:100%;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff;">
+      <div id="lErr" style="font-size:13px;color:#FCA5A5;min-height:16px;margin-bottom:10px"></div>
+      <button style="width:100%;max-width:320px;padding:14px;background:#22C55E;color:#fff;border:none;border-radius:14px;font-size:15px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;" onclick="doLogin()">ログイン / 新規作成</button>
+      <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center">パスワード不要 · このデバイスのみに保存</div>
     </div>`;
   document.getElementById('lEmail')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  // スプラッシュをタップでログイン画面へ
+  const splash=document.getElementById('splash-wrap');
+  const login=document.getElementById('login-wrap');
+  function transitionToLogin(){
+    if(!splash||splash._done)return;
+    splash._done=true;
+    splash.style.transition='opacity .7s ease';
+    splash.style.opacity='0';
+    login.style.transition='opacity .5s ease';
+    login.style.pointerEvents='auto';
+    setTimeout(()=>{
+      login.style.opacity='1';
+      splash.style.display='none';
+      document.getElementById('lEmail')?.focus();
+    },700);
+  }
+  if(splash){
+    splash.addEventListener('click',transitionToLogin);
+    // 初回以降は即ログイン画面
+    if(localStorage.getItem('lingua-splash-seen')){
+      setTimeout(transitionToLogin,100);
+    }else{
+      localStorage.setItem('lingua-splash-seen','1');
+      // 3秒後自動遷移
+      setTimeout(transitionToLogin,2000);
+    }
+  }
 }
 
 function doLogin(){
@@ -1464,6 +1514,23 @@ function showToast(msg,duration=2500){
   document.body.appendChild(el);
   requestAnimationFrame(()=>{el.style.opacity='1';});
   setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),200);},duration);
+}
+
+function showLoginForm(){
+  const splash=document.getElementById('splashScreen');
+  const form=document.getElementById('loginForm');
+  if(!splash||!form)return;
+  splash.style.transition='opacity .6s ease';
+  splash.style.opacity='0';
+  setTimeout(()=>{
+    splash.style.display='none';
+    form.style.display='flex';
+    form.style.opacity='0';
+    form.style.transition='opacity .4s ease';
+    requestAnimationFrame(()=>{form.style.opacity='1';});
+    const inp=document.getElementById('lEmail');
+    if(inp)inp.focus();
+  },600);
 }
 
 function logoLoginFull(){
