@@ -569,17 +569,18 @@ function speak(text,lang){
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text.trim());
   u.lang=bcp;u.rate=0.9;u.pitch=1.0;
-  function trySpeak(){
-    const voices=speechSynthesis.getVoices();
-    if(voices.length){
-      const pref=voices.filter(v=>v.lang.startsWith(bcp.slice(0,2)));
-      const best=pref.find(v=>/premium|enhanced|natural|siri|kyoko|amelie|thomas/i.test(v.name))||pref.find(v=>v.localService)||pref[0];
-      if(best)u.voice=best;
-    }
-    speechSynthesis.speak(u);
+  // iOS Safari: speak() must be called synchronously in user gesture handler
+  // Best voice selection (non-blocking - voices may already be loaded)
+  const voices=speechSynthesis.getVoices();
+  if(voices.length){
+    const pref=voices.filter(v=>v.lang.startsWith(bcp.slice(0,2)));
+    const best=pref.find(v=>/premium|enhanced|natural|siri|kyoko|amelie|thomas/i.test(v.name))
+      ||pref.find(v=>v.localService)
+      ||pref[0];
+    if(best)u.voice=best;
   }
-  if(speechSynthesis.getVoices().length){trySpeak();}
-  else{speechSynthesis.onvoiceschanged=()=>{trySpeak();speechSynthesis.onvoiceschanged=null;};}
+  // Always call immediately (required for iOS user gesture)
+  speechSynthesis.speak(u);
 }
 
 // ── Helpers ──
@@ -587,8 +588,8 @@ const activeLangs=()=>Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])
 function tagH(l){return`<span class="tag tag-${l}">${LANG[l]?.flag||''} ${LANG[l]?.label?.slice(0,2)||l}</span>`;}
 function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
 function spkH(t,l,lb){
-  const e=(t||'').replace(/'/g,"\'");
-  return`<button class="spk-btn" onclick="speak('${e}','${l}')">▶${lb?' '+lb:''}</button>`;
+  const e=(t||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+  return`<button class="spk-btn" onclick="speak(this.dataset.t,this.dataset.l)" data-t="${e}" data-l="${l||''}">▶${lb?' '+lb:''}</button>`;
 }
 function sorted(){
   const v=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
@@ -696,11 +697,27 @@ function normalizeFrInput(raw){
 }
 async function doLookup(){
   const inp=document.getElementById('addInput');
-  let raw=(inp?.value||S.addInput).trim();
+  const raw=(inp?.value||S.addInput).trim();
   if(!raw)return;
+
+  // 長文・例句チェック（スペース除去の前に判定）
+  const looksLikeSentence=raw.includes(' ')||raw.length>40;
+  if(looksLikeSentence){
+    S.addInput=raw;
+    S.addErr='長文は辞書検索できません。下のフォームから手動登録してください。';
+    S.addLoading=false;S.addResult=null;render();
+    setTimeout(()=>{
+      const el=document.getElementById('manualMeaning');if(el)el.focus();
+      const si=document.getElementById('manualIsSentence');if(si)si.checked=true;
+    },80);
+    return;
+  }
+
+  // 単語: スペース除去・正規化
   let word=raw.replace(/\s+/g,'');
-  if(inp&&word!==raw)inp.value=word;
+  if(inp)inp.value=word;
   S.addInput=word;
+
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
   S.addLoading=true;S.addResult=null;S.addErr='';render();
@@ -761,7 +778,6 @@ function addH(){
         <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:10px">📝 手動で直接追加</div>
         <input class="inp" id="manualMeaning" placeholder="中文释义（必须）" style="margin-bottom:8px">
         <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':'発音（任意）'}" style="margin-bottom:8px">
-        <input class="inp" id="manualExample" placeholder="例句（任意）" style="margin-bottom:12px">
 
         <div style="display:flex;gap:8px">
           <button onclick="manualAdd()" style="flex:1;padding:11px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">＋ 追加する</button>
@@ -808,10 +824,6 @@ function addPreviewH(r){
         </div>
         <button class="btn" disabled>追加中...</button>
       `:`
-        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
-          <input type="checkbox" id="quickIsSentence" style="width:16px;height:16px;accent-color:var(--g)">
-          <span style="font-size:13px;color:var(--tx)">📖 例句として登録（練習には出ない）</span>
-        </label>
         <div style="display:flex;gap:8px">
           <button onclick="quickAdd()" style="flex:1;padding:13px;background:var(--bg3);color:var(--tx);border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;touch-action:manipulation;">＋ すぐ追加</button>
           <button onclick="confirmAdd()" style="flex:1;padding:13px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;font-weight:700;font-family:inherit;touch-action:manipulation;">⚡ AI詳細付き</button>
@@ -1553,8 +1565,10 @@ function statsH(){
       const langNames={fr:'フランス語',ja:'日本語',en:'英語'};
       const parts=Object.entries(byLang).map(([lang,data])=>{
         const flag=(LANG[lang]&&LANG[lang].flag)||'';
-        const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'}">${k} ${n}語</span>`).join('');
-        return`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">${flag}${lvBadges||''}</span>`;
+        const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'}">${k} ${n}</span>`).join('');
+        const noLevel=data.total-data.leveled;
+        const otherBadge=noLevel>0?`<span class="lv-badge" style="background:var(--bg3);color:var(--tx3)">他 ${noLevel}</span>`:'';
+        return`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">${flag}${lvBadges}${otherBadge}</span>`;
       }).join('<span style="color:var(--bd);margin:0 4px">·</span>');
       return parts?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:var(--tx3);flex-shrink:0">レベル</span><span style="font-size:12px;color:var(--tx2)">${parts}</span></div>`:'';
     })()}
