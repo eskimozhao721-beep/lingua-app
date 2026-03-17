@@ -506,20 +506,7 @@ async function lookupJa(word){
 }
 
 async function lookupFr(word){
-  const candidates=normalizeFrInput(word);
-  let lastErr=null;
-  for(const candidate of candidates){
-    try{
-      const result=await _lookupFrRaw(candidate);
-      if(result){
-        // Only reject if result word is a single letter but we searched for a longer word
-        const rw=(result.word||'').toLowerCase().trim();
-        if(rw.length===1 && candidate.length>2) continue;
-        return result;
-      }
-    }catch(e){lastErr=e;}
-  }
-  throw lastErr||new Error('「'+word+'」が見つかりません。スペルを確認してください。');
+  return _lookupFrRaw(word.trim());
 }
 
 
@@ -746,9 +733,7 @@ function genderH(g){
 // ════════════════════════
 // ➕ ADD WORD
 // ════════════════════════
-function normalizeFrInput(raw){
-  return raw.replace(/\s+/g,'');
-}
+
 async function doLookup(){
   const inp=document.getElementById('addInput');
   const raw=(inp?.value||S.addInput).trim();
