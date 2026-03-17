@@ -40,7 +40,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .app{width:100%;max-width:430px;min-height:100svh;background:var(--bg);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
 
 /* ── Top bar ── */
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:30;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;position:sticky;top:0;z-index:20;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .lang-toggle{display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:2px;overflow-x:auto;flex-shrink:0;}
 .lang-toggle::-webkit-scrollbar{display:none;}
 .lang-btn{padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;font-family:inherit;color:var(--tx2);border-radius:8px;white-space:nowrap;transition:all .18s;}
@@ -54,7 +54,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .screen{flex:1;overflow-y:auto;padding:20px 16px calc(96px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
 
 /* ── Navbar ── */
-.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:30;padding-bottom:env(safe-area-inset-bottom);}
+.navbar{display:flex;border-top:1px solid var(--bd);background:var(--bg);position:sticky;bottom:0;z-index:20;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .nav-item{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;font-size:10px;color:var(--tx3);transition:color .18s;font-weight:500;}
 .nav-item.active{color:var(--g);}
 .nav-icon{font-size:20px;display:block;margin-bottom:2px;transition:transform .2s;}
@@ -273,9 +273,9 @@ const EBI=[1,3,7,14];
 
 // ── Language config ──
 const LANG={
-  fr:{label:'フランス語',flag:'',short:'フラ',bcp:'fr-FR'},
-  ja:{label:'日本語',flag:'',short:'日本',bcp:'ja-JP'},
-  en:{label:'英語',flag:'',short:'英語',bcp:'en-US'}
+  fr:{label:'フランス語',flag:'🇫🇷',short:'フラ',bcp:'fr-FR'},
+  ja:{label:'日本語',flag:'🇯🇵',short:'日本',bcp:'ja-JP'},
+  en:{label:'英語',flag:'🇬🇧',short:'英語',bcp:'en-US'}
 };
 
 // ── SVG Logo ──
@@ -1397,11 +1397,6 @@ function statsH(){
         <div class="stat-val">${mas}</div>
         <div style="font-size:12px;color:var(--tx3);margin-top:4px">${tot-mas}語学習中</div>
       </div>
-    </div>
-    <div class="sec-lbl">今週の学習</div>
-    <div class="week-dots">
-      ${['日','月','火','水','木','金','土'].map((d,i)=>`<div class="day-dot ${(today===0?i<=6:i<today)?'day-done':'day-todo'}">${d}</div>`).join('')}
-    </div>
     ${(()=>{
       // 全言語のレベル分布（法語DELF・日語JLPT・英語は独自）
       const allWords=S.words.filter(w=>S.enabledLangs[w.lang]);
@@ -1416,21 +1411,17 @@ function statsH(){
       const langNames={fr:'フランス語',ja:'日本語',en:'英語'};
       const parts=Object.entries(byLang).map(([lang,data])=>{
         const flag=(LANG[lang]&&LANG[lang].flag)||'';
-        const noLevel=data.total-data.leveled;
-        const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'};margin:2px;">${k} ${n}語</span>`).join('');
-        if(!lvBadges)return'';return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <span style="font-size:13px;font-weight:600;color:var(--tx)">${flag} ${langNames[lang]||lang}</span>
-            <span style="font-size:12px;color:var(--tx3)">${data.total}語</span>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">
-            ${lvBadges}
-            
-          </div>
-        </div>`;
-      }).join('');
-      return parts?`<div class="sec-lbl">レベル分布</div>${parts}`:'';
+        const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'}">${k} ${n}語</span>`).join('');
+        return`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">${flag}${lvBadges||''}</span>`;
+      }).join('<span style="color:var(--bd);margin:0 4px">·</span>');
+      return parts?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:var(--tx3);flex-shrink:0">レベル</span><span style="font-size:12px;color:var(--tx2)">${parts}</span></div>`:'';
     })()}
+    </div>
+    <div class="sec-lbl">今週の学習</div>
+    <div class="week-dots">
+      ${['日','月','火','水','木','金','土'].map((d,i)=>`<div class="day-dot ${(today===0?i<=6:i<today)?'day-done':'day-todo'}">${d}</div>`).join('')}
+    </div>
+
     ${ebiH()}
     ${(()=>{try{return isAdmin(U&&U.email)?whitelistAdminH():'';}catch{return '';}})()}
     <div class="sec-lbl">言語設定</div>
