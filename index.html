@@ -306,13 +306,36 @@ function logoSmall(){
 // ── Import list ──
 
 const WRITING_TOPICS={
-  fr:[
-    {title:'Ma journée idéale',sub:'理想の一日',hint:'時間順序で',kw:['se lever','matin','déjeuner','se promener','soir','tranquille','parfait']},
-    {title:'Mon repas préféré',sub:'好きな食べ物',hint:'食材と味',kw:['délicieux','ingrédient','cuisiner','goût','saveur','recette','famille']},
-    {title:'La ville où je vis',sub:'住んでいる都市',hint:'場所と形容詞',kw:['quartier','animé','calme','transports','parc','habitant','moderne']},
-    {title:'Mon weekend passé',sub:'先週末を振り返る',hint:'複合過去時制',kw:['visiter','manger','beau temps','ensemble','fatiguant','sympa','enfin']},
-    {title:"Mes projets pour l'été",sub:'夏の計画',hint:'未来時制',kw:['je vais','partir','plage','vacances','amis','espérer','cette année']}
-  ],
+  fr:{
+    A1:[
+      {title:'Bonjour !',sub:'自己紹介',hint:'être/avoir，名前・出身・職業',kw:['je suis','j\'ai','habiter','aimer','parler','travailler','bonjour']},
+      {title:'Ma famille',sub:'家族紹介',hint:'所有形容詞 mon/ma/mes',kw:['père','mère','frère','sœur','avoir','adorer','grand-père']},
+      {title:'Mon animal préféré',sub:'好きな動物',hint:'形容詞の性数一致',kw:['chat','chien','petit','grand','mignon','avoir','jouer']},
+      {title:'Ce que je mange le matin',sub:'朝食の習慣',hint:'manger/boire+食べ物',kw:['manger','boire','pain','café','fruit','matin','toujours']},
+      {title:'La météo aujourd\'hui',sub:'今日の天気',hint:'il fait + 天気表現',kw:['il fait','soleil','pluie','froid','chaud','temps','dehors']},
+    ],
+    A2:[
+      {title:'Ma journée idéale',sub:'理想の一日',hint:'時間順序・副詞',kw:['se lever','matin','déjeuner','se promener','soir','tranquille','parfait']},
+      {title:'Mon repas préféré',sub:'好きな食べ物',hint:'食材と味の表現',kw:['délicieux','ingrédient','cuisiner','goût','saveur','recette','famille']},
+      {title:'La ville où je vis',sub:'住んでいる都市',hint:'場所の前置詞と形容詞',kw:['quartier','animé','calme','transports','parc','habitant','moderne']},
+      {title:'Mon weekend passé',sub:'先週末を振り返る',hint:'複合過去時制',kw:['visiter','manger','beau temps','ensemble','fatiguant','sympa','enfin']},
+      {title:"Mes projets pour l'été",sub:'夏の計画',hint:'近接未来 aller+不定詞',kw:['je vais','partir','plage','vacances','amis','espérer','cette année']},
+    ],
+    B1:[
+      {title:'Les avantages de la ville',sub:'都市生活のメリット',hint:'比較表現・接続詞',kw:['par contre','cependant','avantage','inconvénient','pratique','stressant','qualité de vie']},
+      {title:'Mon rapport aux réseaux sociaux',sub:'SNSとの付き合い方',hint:'意見表現',kw:['selon moi','partager','connecté','dépendre','influencer','quotidien','d\'ailleurs']},
+      {title:'Un voyage dont je rêve',sub:'夢の旅行',hint:'条件法・仮定',kw:['si j\'avais','je voudrais','découvrir','culture','paysage','rencontrer','inoubliable']},
+      {title:'Mes habitudes pour rester en forme',sub:'健康維持の習慣',hint:'頻度副詞・il faut',kw:['régulièrement','il faut','dormir','équilibre','stress','activité physique','éviter']},
+      {title:"L'importance de l'amitié",sub:'友情の大切さ',hint:'抽象名詞・感情',kw:['soutenir','confiance','partager','surmonter','précieux','lien','sincère']},
+    ],
+    B2:[
+      {title:"Les défis de l'apprentissage",sub:'語学学習の課題',hint:'論証・譲歩表現',kw:['certes','néanmoins','approfondir','persévérance','immersion','nuance','contexte']},
+      {title:"L'impact des nouvelles technologies",sub:'新技術の影響',hint:'受動態・複雑な接続',kw:['transformer','bouleverser','en revanche','d\'autant plus','enjeu','paradoxalement','s\'adapter']},
+      {title:'La mondialisation',sub:'グローバル化の光と影',hint:'論理展開・仮定',kw:['d\'une part','d\'autre part','inégalité','diversité','économique','identité','à condition que']},
+      {title:'Mon point de vue sur l\'éducation',sub:'教育に関する意見',hint:'主張と論拠',kw:['selon','il convient de','transmettre','développer','critique','autonomie','épanouissement']},
+      {title:'La place de la nature dans notre vie',sub:'自然と現代生活',hint:'複雑な時制・比喩',kw:['s\'éloigner','préserver','ressourcer','artificiel','contraste','essentiel','prendre conscience']},
+    ],
+  },
   ja:[
     {title:'社会問題について',sub:'社会問題を話す',hint:'理由と解決策',kw:['問題','解決','社会','影響','必要','考える','思う']},
     {title:'将来の夢',sub:'将来の夢を語る',hint:'たい形・つもり',kw:['なりたい','働く','夢','目標','努力','大切','将来']},
@@ -464,10 +487,19 @@ async function lookupFr(word){
   for(const candidate of candidates){
     try{
       const result=await _lookupFrRaw(candidate);
-      if(result)return result;
+      if(result){
+        // Validate: result word should be similar to what we searched
+        const rw=(result.word||'').toLowerCase();
+        const cw=candidate.toLowerCase();
+        // Reject if result is single char but input was longer
+        if(rw.length===1&&cw.length>1)continue;
+        // Reject if result word is completely different (edit distance heuristic)
+        if(rw.length>0&&cw.length>0&&!rw.startsWith(cw[0])&&!cw.startsWith(rw[0]))continue;
+        return result;
+      }
     }catch(e){lastErr=e;}
   }
-  throw lastErr||new Error('見つかりません');
+  throw lastErr||new Error('「'+word+'」が見つかりません。スペルを確認してください。');
 }
 
 async function _lookupFrRaw(word){
@@ -870,17 +902,20 @@ function quickAdd(){
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===r.word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日に追加済みです（復習"+dup.reviewCount+"回）";render();return;}
   const meaning=(S.addMemo&&S.addMemo.trim())||(r.allSenses&&r.allSenses[0]&&r.allSenses[0].text)||r.meanings||r.word;
-  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,
+  const exText=(document.getElementById('addExample')?.value||S.addExample||'').trim();
+  const examples=exText?[{text:exText,trans:''}]:[];
+  const isSentenceEntry=document.getElementById('quickIsSentence')?.checked||false;
+  const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence:isSentenceEntry,
     data:{word:r.word,reading:r.reading||"",meaning,
       delf:S.lang==="fr"?r.delf||null:null,jlpt:S.lang==="ja"?r.jlpt||null:null,
-      gender:null,pluralNote:null,examples:[],grammar:"",related:"",
+      gender:null,pluralNote:null,examples,grammar:"",related:"",
       wordFamily:[],conjugations:null,collocations:[],
       source:r.source||"辞書",allSenses:r.allSenses||[],aiEnriched:false},
     reviewCount:0,mastered:false,addedAt:Date.now()};
   S.words=[nw,...S.words];saveWords();
   const p=r.word.length>20?r.word.slice(0,20)+"…":r.word;
   S.addInput="";S.addResult=null;S.addErr="";S.addMemo="";
-  showToast("✓ 「"+p+"」を追加しました");setView("list");
+  celebrate();showToast("✓ 「"+p+"」を追加しました");setView("list");
 }
 async function confirmAdd(){
   const r=S.addResult;if(!r)return;
@@ -1218,7 +1253,11 @@ function writingLimitBadgeH(){
 function writingH(){
   if(S.wView==='history')return writingHistH();
   if(S.wView==='histDetail')return writingHistDetailH();
-  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
+  const _topicsAll=WRITING_TOPICS[S.lang];
+  const _diff=S.wDifficulty||'B1';
+  const topics=(_topicsAll&&!Array.isArray(_topicsAll))
+    ?(_topicsAll[_diff]||_topicsAll['B1']||Object.values(_topicsAll)[0])
+    :(_topicsAll||WRITING_TOPICS.en);
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
   if(S.wView==='result'&&S.wResult)return writingResultH(topic);
@@ -1937,6 +1976,27 @@ function goPractice(){S.tab='practice';S.pMode='flash';resetP();render();documen
 
 const ICONS={play:'▶',back:'←'};
 
+
+function celebrate(){
+  const sets=[['🎉','✨','🌟','💫','🎊'],['🥳','🎈','🌈','⭐','🎀'],['🌸','🌺','💐','🌻','🌼'],['🦋','💖','✨','🎶','🌟'],['🐣','🌱','💚','✨','🌿'],['🍀','⭐','💫','🎯','🌠'],['🎸','🎵','✨','💥','🌟'],['🏆','🥇','✨','🎊','💪']];
+  const set=sets[Math.floor(Math.random()*sets.length)];
+  const c=document.createElement('div');
+  c.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;';
+  document.body.appendChild(c);
+  for(let i=0;i<22;i++){
+    const el=document.createElement('div');
+    el.textContent=set[Math.floor(Math.random()*set.length)];
+    const x=5+Math.random()*90,delay=Math.random()*0.7,dur=1.2+Math.random()*0.8,sz=14+Math.floor(Math.random()*18);
+    el.style.cssText=`position:absolute;left:${x}%;top:-40px;font-size:${sz}px;animation:celebFall ${dur}s ${delay}s ease-in forwards;`;
+    c.appendChild(el);
+  }
+  if(!document.getElementById('celebCSS')){
+    const s=document.createElement('style');s.id='celebCSS';
+    s.textContent='@keyframes celebFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(540deg);opacity:0}}';
+    document.head.appendChild(s);
+  }
+  setTimeout(()=>c.remove(),2500);
+}
 function showToast(msg,duration=2500){
   const e=document.getElementById('toast-msg');if(e)e.remove();
   const el=document.createElement('div');el.id='toast-msg';el.textContent=msg;
@@ -2076,9 +2136,16 @@ const QUIZ_BANK={
   en:[{word:'run',meaning:'走る'},{word:'walk',meaning:'歩く'},{word:'eat',meaning:'食べる'},{word:'drink',meaning:'飲む'},{word:'read',meaning:'読む'},{word:'beautiful',meaning:'美しい'},{word:'happy',meaning:'幸せな'},{word:'school',meaning:'学校'},{word:'family',meaning:'家族'},{word:'water',meaning:'水'},{word:'time',meaning:'時間'},{word:'friend',meaning:'友人'}]
 };
 function getDistractors(correctWord,lang,count=3){
-  const myWords=S.words.filter(w=>w.lang===lang&&w.id!==correctWord.id);
+  const myWords=S.words.filter(w=>w.lang===lang&&w.id!==correctWord.id&&!w.isSentence);
   const bank=(QUIZ_BANK[lang]||[]).filter(b=>b.word!==correctWord.data.word);
-  const pool=[...myWords.map(w=>({word:w.data.word,meaning:w.data.meaning,reading:w.data.reading||'',id:w.id})),...bank.map(b=>({word:b.word,meaning:b.meaning,reading:b.reading||'',id:null}))];
+  let pool=[...myWords.map(w=>({word:w.data.word,meaning:w.data.meaning,reading:w.data.reading||'',id:w.id})),...bank.map(b=>({word:b.word,meaning:b.meaning,reading:b.reading||'',id:null}))];
+  // Filter out distractors whose meaning looks like wrong language (pure ASCII = likely English/wrong)
+  const hasCJK=s=>/[\u3000-\u9FFF\uAC00-\uD7FF]/.test(s);
+  const correctHasCJK=hasCJK(correctWord.data.meaning||'');
+  if(correctHasCJK){
+    // Only keep distractors with CJK meanings to avoid English leaking in
+    pool=pool.filter(p=>hasCJK(p.meaning||''));
+  }
   return pool.sort(()=>Math.random()-.5).slice(0,count);
 }
 function buildQSess(lang){
