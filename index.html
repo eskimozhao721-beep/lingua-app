@@ -512,6 +512,56 @@ async function callApiSonnet(prompt,max=1000){
 //  Dictionary APIs
 // ═══════════════════════
 async function lookupJa(word){
+  // 1st try: zh.wiktionary — returns Chinese definitions for Japanese words
+  try{
+    const r=await fetch('https://zh.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const jaDefs=d.ja||[];
+      if(jaDefs.length){
+        const senses=[];
+        jaDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').replace(/\[\d+\]/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text});
+          });
+        });
+        if(senses.length){
+          // Also get reading/jlpt from Jisho silently
+          let reading='',jlpt=null;
+          try{
+            const jr=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
+            if(jr.ok){const jd=await jr.json();const e=jd.data?.[0];if(e){reading=e.japanese?.[0]?.reading||'';jlpt=e.jlpt?.length?e.jlpt[0].replace('jlpt-','').toUpperCase():null;}}
+          }catch{}
+          return{word,reading,meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt,delf:null,source:'中文Wiktionary'};
+        }
+      }
+    }
+  }catch{}
+  // 2nd try: en.wiktionary ja section
+  try{
+    const r=await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const jaDefs=d.ja||[];
+      if(jaDefs.length){
+        const senses=jaDefs.slice(0,6).map((def,i)=>({
+          num:i+1,pos:def.partOfSpeech||'',
+          text:(def.definitions||[]).map(di=>(di.definition||'').replace(/<[^>]*>/g,'')).filter(Boolean).join('; ')
+        })).filter(s=>s.text);
+        if(senses.length){
+          let reading='',jlpt=null;
+          try{
+            const jr=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
+            if(jr.ok){const jd=await jr.json();const e=jd.data?.[0];if(e){reading=e.japanese?.[0]?.reading||'';jlpt=e.jlpt?.length?e.jlpt[0].replace('jlpt-','').toUpperCase():null;}}
+          }catch{}
+          return{word,reading,meanings:senses[0].text,allSenses:senses,jlpt,delf:null,source:'Wiktionary'};
+        }
+      }
+    }
+  }catch{}
+  // 3rd fallback: Jisho (original, English definitions)
   const r=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
   if(!r.ok)throw new Error('辞書エラー');
   const d=await r.json();
