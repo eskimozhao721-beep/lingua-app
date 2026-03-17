@@ -1400,7 +1400,29 @@ function insertKwFS(kw){
   const cc=document.querySelector('.wf-body div:last-child');
   if(cc)cc.textContent=ins.length+'文字';
 }
-async function doWritingFS(){S.wFullscreen=false;await doWriting();}
+async function doWritingFS(){
+  // Read text from fullscreen textarea first
+  const ta=document.getElementById('wfInput');
+  if(ta)S.wText=ta.value;
+  if(!S.wText.trim())return;
+  const today=revisionCountToday();
+  if(today>=1&&!S.wEssayId){S.wErr=' 今日はすでに1篇書きました。明日（'+tomorrowStr()+'）また書いてみよう！';render();return;}
+  if(today>=3||S.wRevCount>=3){S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね ';render();return;}
+  S.wLoad=true;S.wErr='';render(); // render() keeps fullscreen open (wFullscreen=true) with loading state
+  const {topic}=getWritingTopic();
+  const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
+  try{
+    const diffNote={A1:'A1初级',A2:'A2基础',B1:'B1中级',B2:'B2中高级'}[S.wDifficulty||'B1'];
+    const t=await callApiSonnet(`你是专业${langName}教师(${diffNote})。添削作文主题「${topic.title}」：\n\n${S.wText.trim()}\n\nJSON only:{"score":1-10,"corrected":"修正后文章","errors":[{"type":"","original":"","fixed":"","note":""}],"praise":""}`,1000);
+    S.wResult=extractJSON(t);
+    if(!S.wEssayId)S.wEssayId=Date.now().toString();
+    S.wRevCount++;
+    S.wHistory=[{id:Date.now().toString(),lang:S.lang,topic:topic.title,original:S.wText.trim(),result:S.wResult,score:S.wResult.score||null,date:Date.now(),essayId:S.wEssayId,revNum:S.wRevCount},...S.wHistory];
+    saveEssays();
+    S.wFullscreen=false;S.wView='result'; // close fullscreen and show result
+  }catch(e){S.wErr='添削に失敗しました（'+e.message+'）';}
+  S.wLoad=false;render();
+}
 
 function writingResultH(topic){
   const r=S.wResult;
