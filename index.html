@@ -436,11 +436,11 @@ let U={email:'',sk:''};
 let S={
   tab:'words',lang:'fr',view:'list',sel:null,sortMode:'time',sortDir:'desc',
   enabledLangs:{fr:true,ja:true,en:false},
-  tense:'present',
+  tense:'present',detailReturnTab:null,detailReturnView:null,
   // add
   addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addSuggestions:[],addMemo:'',addMode:'dict',addManual:{word:'',reading:'',meaning:'',example:''},
   // practice
-  pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,pStopToday:false,
+  pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,pStopToday:false,fCardShown:0,
   fSentenceMode:false,  // 造句モード on/off
   fSentenceInput:'',fSentenceLoading:false,fSentenceResult:null,fSentenceErr:'',
   qIdx:0,qAns:null,qScore:{c:0,t:0},qFb:null,qTimer:null,qLastCorrect:'',
@@ -553,31 +553,92 @@ async function translateToZh(senses,lang){
 }
 
 async function lookupJa(word){
-  const r=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
-  if(!r.ok)throw new Error('辞書エラー');
-  const d=await r.json();
-  if(!d.data?.length)throw new Error('見つかりませんでした');
-  const entry=d.data[0];
-  const jp=entry.japanese[0]||{};
-  const senses=entry.senses||[];
-  const jlpt=entry.jlpt?.length?entry.jlpt[0].replace('jlpt-','').toUpperCase():null;
-  // 英語定義を取得
-  const rawSenses=senses.slice(0,6).map((s,i)=>({
-    num:i+1,
-    pos:s.parts_of_speech.slice(0,2).join(', '),
-    text:s.english_definitions.slice(0,4).join(', ')
-  }));
-  // AI翻訳で中国語化
-  const allSenses=await translateToZh(rawSenses,'ja');
-  const meaning=allSenses[0]?.textZh||allSenses[0]?.text||'';
-  return{word:jp.word||word,reading:jp.reading||'',meanings:meaning,allSenses,jlpt,delf:null,source:'Jisho+AI翻訳'};
+  // 1. ja.wiktionary → 日本語定義（日語解釈日語）
+  try{
+    const r=await fetch('https://ja.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const jaDefs=d.ja||[];
+      if(jaDefs.length){
+        const senses=[];
+        jaDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text,textZh:'',textEn:text});
+          });
+        });
+        if(senses.length){
+          const meaning=senses[0].text;
+          return{word,reading:'',meanings:meaning,allSenses:senses,jlpt:null,delf:null,source:'日本語Wiktionary'};
+        }
+      }
+    }
+  }catch{}
+
+  // 2. Jisho fallback（読み・JLPTレベル取得用）
+  try{
+    const r=await fetch('/api/jisho?keyword='+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      if(d.data?.length){
+        const entry=d.data[0];
+        const jp=entry.japanese[0]||{};
+        const senses=entry.senses||[];
+        const jlpt=entry.jlpt?.length?entry.jlpt[0].replace('jlpt-','').toUpperCase():null;
+        const rawSenses=senses.slice(0,6).map((s,i)=>({
+          num:i+1,pos:s.parts_of_speech.slice(0,2).join(', '),
+          text:s.english_definitions.slice(0,4).join(', ')
+        }));
+        const meaning=rawSenses[0]?.text||'';
+        return{word:jp.word||word,reading:jp.reading||'',meanings:meaning,allSenses:rawSenses,jlpt,delf:null,source:'Jisho'};
+      }
+    }
+  }catch{}
+
+  throw new Error('「'+word+'」が見つかりませんでした');
 }
 
 async function lookupFr(word){
-  let rawSenses=[];
-  let reading='';
-  let source='';
-  // 1. zh.wiktionary（中文定義があればそのまま使う）
+  // 1. ja.wiktionary → 日本語でフランス語を解説
+  try{
+    const r=await fetch('https://ja.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const frDefs=d.fr||[];
+      if(frDefs.length){
+        const senses=[];
+        frDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text,textEn:text});
+          });
+        });
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt:null,delf:guessDelf(word),source:'日本語Wiktionary'};
+      }
+    }
+  }catch{}
+  // 2. fr.wiktionary → フランス語でフランス語を解説
+  try{
+    const r=await fetch('https://fr.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const frDefs=d.fr||[];
+      if(frDefs.length){
+        const senses=[];
+        frDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text});
+          });
+        });
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt:null,delf:guessDelf(word),source:'Wiktionnaire(FR)'};
+      }
+    }
+  }catch{}
+  // 3. zh.wiktionary fallback
   try{
     const r=await fetch('https://zh.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
     if(r.ok){
@@ -589,51 +650,70 @@ async function lookupFr(word){
           const pos=def.partOfSpeech||'';
           (def.definitions||[]).forEach(di=>{
             const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
-            if(text)senses.push({num:senses.length+1,pos,text,textZh:text,textEn:''});
+            if(text)senses.push({num:senses.length+1,pos,text});
           });
         });
-        if(senses.length){
-          // 中文Wiktionaryの定義はすでに中国語なので翻訳不要
-          const meanings=senses[0].text;
-          return{word,reading:'',meanings,allSenses:senses.slice(0,8),jlpt:null,delf:guessDelf(word),source:'中文Wiktionary'};
-        }
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt:null,delf:guessDelf(word),source:'中文Wiktionary'};
       }
     }
   }catch{}
-  // 2. en.wiktionary fr section → AI翻訳
+  // 4. en.wiktionary fr section
   try{
     const r=await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
     if(r.ok){
       const d=await r.json();
       const frDefs=d.fr||[];
       if(frDefs.length){
-        rawSenses=frDefs.slice(0,6).map((def,i)=>({
+        const rawSenses=frDefs.slice(0,6).map((def,i)=>({
           num:i+1,pos:def.partOfSpeech||'',
           text:(def.definitions||[]).map(d=>(d.definition||'').replace(/<[^>]*>/g,'')).filter(Boolean).join('; ')
         })).filter(s=>s.text);
-        source='Wiktionary+AI翻訳';
+        if(rawSenses.length)return{word,reading:'',meanings:rawSenses[0].text,allSenses:rawSenses,jlpt:null,delf:guessDelf(word),source:'Wiktionary(EN)'};
       }
     }
   }catch{}
-  if(!rawSenses.length)throw new Error('「'+word+'」が見つかりません。スペルを確認してください。');
-  const allSenses=await translateToZh(rawSenses,'fr');
-  const meanings=allSenses[0]?.textZh||allSenses[0]?.text||'';
-  return{word,reading:'',meanings,allSenses,jlpt:null,delf:guessDelf(word),source};
+  throw new Error('「'+word+'」が見つかりません。スペルを確認してください。');
 }
 
+
 async function lookupEn(word){
-  const r=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word));
-  if(!r.ok)throw new Error('見つかりません');
-  const d=await r.json();
-  if(!Array.isArray(d)||!d.length)throw new Error('見つかりません');
-  const entry=d[0];
-  const phonetic=entry.phonetic||entry.phonetics?.find(p=>p.text)?.text||'';
-  const rawSenses=[];
-  (entry.meanings||[]).forEach(m=>(m.definitions||[]).slice(0,3).forEach(def=>rawSenses.push({pos:m.partOfSpeech,text:def.definition,example:def.example||''})));
-  const allSenses=await translateToZh(rawSenses.slice(0,6),'en');
-  const meanings=allSenses[0]?.textZh||allSenses[0]?.text||'';
-  return{word:entry.word||word,reading:phonetic,meanings,allSenses,jlpt:null,delf:null,source:'FreeDictionary+AI翻訳'};
+  // 1. ja.wiktionary → 日本語で英語を解説
+  try{
+    const r=await fetch('https://ja.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const enDefs=d.en||[];
+      if(enDefs.length){
+        const senses=[];
+        enDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text});
+          });
+        });
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt:null,delf:null,source:'日本語Wiktionary'};
+      }
+    }
+  }catch{}
+  // 2. FreeDictionary → 英英辞典
+  try{
+    const r=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      if(Array.isArray(d)&&d.length){
+        const entry=d[0];
+        const phonetic=entry.phonetic||entry.phonetics?.find(p=>p.text)?.text||'';
+        const rawSenses=[];
+        (entry.meanings||[]).forEach(m=>(m.definitions||[]).slice(0,3).forEach(def=>rawSenses.push({pos:m.partOfSpeech,text:def.definition,example:def.example||''})));
+        const meanings=rawSenses[0]?.text||'';
+        return{word:entry.word||word,reading:phonetic,meanings,allSenses:rawSenses.slice(0,6),jlpt:null,delf:null,source:'FreeDictionary'};
+      }
+    }
+  }catch{}
+  throw new Error('「'+word+'」が見つかりません。');
 }
+
 
 function guessDelf(w){
   const common=['être','avoir','aller','faire','dire','voir','vouloir','pouvoir','savoir','venir','prendre','partir','mettre','aimer','manger','boire','maison','famille','ami','école','travail','ville','pays','jour','temps'];
@@ -663,390 +743,36 @@ function isAdj(pos){
 
 function buildPrompt(word,meaning,lang,pos){
   const vb=isVerb(pos),nn=isNoun(pos);
-  const ex2='[{"text":"","trans":"中文"},{"text":"","trans":"中文"}]';
+  const ex2='[{"text":"","trans":""},{"text":"","trans":""}]';
   const wf2='[{"word":"","pos":"","meaning":""},{"word":"","pos":"","meaning":""}]';
-  const col3='[{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"},{"phrase":"","meaning":"中文"}]';
+  const col3='[{"phrase":"","meaning":""},{"phrase":"","meaning":""},{"phrase":"","meaning":""}]';
+  const syn='{"synonyms":["",""],"antonyms":["",""]}';
+  const ety='"etymology":"語源・由来（簡潔に）"';
   if(lang==='fr'){
     const gp=nn?',"gender":{"masc":"","fem":null,"mascPl":"","irregular":false}':',"gender":null';
     const cp=vb?',"conjugations":'+FR_CONJ:',"conjugations":null';
-    return `FR「${word}」(${meaning})。JSON only:{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
+    return `FR「${word}」。JSON only:{"reading":"/IPA/"${gp},"pluralNote":null,"examples":${ex2},"grammar":"文法要点","related":"関連語","wordFamily":${wf2}${cp},"collocations":${col3},"synonymsAntonyms":${syn},${ety}}`;
   }
   if(lang==='ja'){
-    // 動詞のみ活用表を生成、名詞・形容詞はnull
     const adj=isAdj(pos);
     const JA_ADJ_CONJ='{"基":[{"l":"辞書形","f":"","r":""},{"l":"です形","f":"","r":""},{"l":"て形","f":"","r":""},{"l":"た形","f":"","r":""}],"否":[{"l":"ない形","f":"","r":""},{"l":"ではない","f":"","r":""}]}';
     const cp=vb?',"conjugations":'+JA_CONJ:adj?',"conjugations":'+JA_ADJ_CONJ:',"conjugations":null';
-    return `日「${word}」(${meaning})。JSON only:{"reading":"假名(roma)","examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}`;
+    return `日「${word}」。JSON only:{"reading":"仮名(roma)","examples":${ex2},"grammar":"文法要点","related":"関連語","wordFamily":${wf2}${cp},"collocations":${col3},"synonymsAntonyms":${syn},${ety}}`;
   }
-  return `EN「${word}」(${meaning})。JSON only:{"reading":"/IPA/","examples":${ex2},"grammar":"中文语法要点","related":"related words","wordFamily":${wf2},"conjugations":null,"collocations":${col3}}`;
+  return `EN「${word}」。JSON only:{"reading":"/IPA/","examples":${ex2},"grammar":"文法要点","related":"related words","wordFamily":${wf2},"conjugations":null,"collocations":${col3},"synonymsAntonyms":${syn},${ety}}`;
 }
 
-// ── Speech synthesis ──
-// ── 声音选择优先级 ──
-// 日语优先级：Google日本語 > お-ren(iOS) > Kyoko(macOS) > Otoya > 其他ja-JP在线 > 离线
-// iOS上 "O-ren" 或 "Kyoko" 通常质量较好
-// 参数 preferFemale 可控制男/女声优先
-const VOICE_PREFS={
-  fr:['Google français','Thomas','Amelie','Marie','fr-FR'],
-  ja:['Google 日本語','O-ren','Kyoko','Otoya','Hattori','ja-JP'],
-  en:['Google US English','Samantha','Karen','Daniel','Moira','en-US']
-};
-// 已知质量较差的声音（跳过）
-const VOICE_BLACKLIST=['Microsoft','eline','Alice'];
-let _vc={};
-
-function getBestVoice(lang){
-  const voices=speechSynthesis.getVoices();
-  if(!voices.length)return null;
-  const bcp=LANG[lang]?.bcp||'en-US';
-  const langCode=bcp.slice(0,2); // 'ja','fr','en'
-
-  // 步骤1：按优先级名单匹配
-  const prefs=VOICE_PREFS[lang]||[];
-  for(const p of prefs){
-    const v=voices.find(x=>
-      x.name.includes(p)&&
-      !VOICE_BLACKLIST.some(b=>x.name.includes(b))
-    );
-    if(v){_vc[lang]=v;return v;}
-  }
-
-  // 步骤2：同语言的在线声音优先（在线音质更好）
-  const byLang=voices.filter(x=>
-    (x.lang===bcp||x.lang.startsWith(langCode))&&
-    !VOICE_BLACKLIST.some(b=>x.name.includes(b))
-  );
-  const online=byLang.find(x=>!x.localService);
-  if(online){_vc[lang]=online;return online;}
-
-  // 步骤3：同语言离线声音
-  if(byLang[0]){_vc[lang]=byLang[0];return byLang[0];}
-
-  return null;
-}
-
-function speak(text,lang){
-  if(!window.speechSynthesis)return;
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang=LANG[lang]?.bcp||'en-US';
-  // 日语：少し遅め、ピッチ自然に
-  u.rate=lang==='ja'?0.9:lang==='fr'?0.84:0.88;
-  u.pitch=lang==='ja'?1.0:1.0;
-  u.volume=1.0;
-  const go=()=>{
-    const v=getBestVoice(lang);
-    if(v){u.voice=v;u.lang=v.lang;}// 声音的lang比BCP更准确
-    speechSynthesis.speak(u);
-  };
-  if(speechSynthesis.getVoices().length>0)go();
-  else speechSynthesis.onvoiceschanged=()=>{speechSynthesis.onvoiceschanged=null;go();};
-}
-
-// ── Helpers ──
-const activeLangs=()=>Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])=>k);
-function tagH(l){return`<span class="tag tag-${l}">${LANG[l]?.flag||''} ${LANG[l]?.label?.slice(0,2)||l}</span>`;}
-function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
-function spkH(t,l,lb=''){const e=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<button class="spk-btn" onclick="speak('${e}','${l}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>${lb?' '+lb:''}</button>`;}
-
-function celebrate(){
-  const emojis=['🌸','✨','🎉','💫','🌟','🎊','⭐'];
-  emojis.forEach((em,i)=>setTimeout(()=>{
-    const el=document.createElement('div');
-    el.className='celebrate';
-    el.textContent=em;
-    // 画面全体にランダム配置
-    const x=15+Math.random()*70; // 15%~85% of screen width
-    const y=20+Math.random()*60; // 20%~80% of screen height
-    el.style.left=x+'vw';
-    el.style.top=y+'vh';
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1400);
-  },i*100));
-}
-function sorted(){
-  const ws=S.words.filter(w=>w.lang===S.lang);
-  const dir=S.sortDir==='asc'?1:-1;
-  if(S.sortMode==='mastery'){
-    return[...ws].sort((a,b)=>{
-      const diff=(b.mastered?1:0)-(a.mastered?1:0)||b.reviewCount-a.reviewCount;
-      return diff*dir;
-    });
-  }
-  if(S.sortMode==='level'){
-    return[...ws].sort((a,b)=>{
-      const diff=(LV_NUM[a.data?.jlpt||a.data?.delf]||99)-(LV_NUM[b.data?.jlpt||b.data?.delf]||99);
-      return diff*dir;
-    });
-  }
-  // time
-  return[...ws].sort((a,b)=>(b.addedAt-a.addedAt)*dir);
-}
-
-// ── Navigation ──
-function switchTab(t){
-  S.tab=t;S.view='list';S.wFullscreen=false;
-  if(t==='writing'){
-    // wResult があれば結果画面を維持、なければ書く画面
-    if(!S.wResult)S.wView='write';
-    // 別タブから戻った時はリセットしない
-  } else {
-    S.wView='write';
-  }
-  if(t==='practice')resetP();
-  render();
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===t));
-}
-function setLang(l){
-  S.lang=l;S.wEssayId=null;S.wRevCount=0;
-  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));
-  if(S.tab==='practice')resetP();
-  render();
-}
-
-// ════════════════════════
-// 📖 WORDS LIST
-// ════════════════════════
-function wordsListH(){
-  const words=sorted();
-  return`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-      <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em">単語帳</div>
-      <div style="font-size:13px;color:var(--tx2);font-weight:500">${LANG[S.lang]?.flag} ${words.length}語</div>
-    </div>
-
-    <button class="add-btn" onclick="setView('add')">
-      <span style="font-size:16px">＋</span> 新しい単語を追加
-    </button>
-    <div class="sort-bar">
-      ${[['time','🕐 追加順'],['mastery','⭐ 習得度'],['level','📊 難易度']].map(([k,l])=>{
-        const isActive=S.sortMode===k;
-        const arrow=isActive?(S.sortDir==='asc'?'↑':'↓'):'';
-        return`<button class="sort-btn${isActive?' active':''}"
-          onclick="if(S.sortMode==='${k}'){S.sortDir=S.sortDir==='desc'?'asc':'desc';}else{S.sortMode='${k}';S.sortDir='desc';}render()">
-          ${l}${arrow?` <span style="font-size:13px">${arrow}</span>`:''}
-        </button>`;
-      }).join('')}
-    </div>
-    ${words.length===0?`<div class="empty-state">
-      <div style="font-size:40px;margin-bottom:12px">📚</div>
-      <div style="font-weight:600;color:var(--tx);margin-bottom:6px">まだ単語がありません</div>
-      <div>上のボタンから最初の単語を追加しましょう</div>
-    </div>`:''}
-    ${words.map(w=>`
-    <div class="word-card-wrap" id="wrap-${w.id}">
-      <div class="word-card-del" id="del-${w.id}" onclick="confirmDeleteWord('${w.id}')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        <span class="word-card-del-lbl">削除</span>
-      </div>
-      <div class="word-card" id="card-${w.id}"
-        onclick="handleCardClick('${w.id}')"
-        ontouchstart="swipeStart(event,'${w.id}')"
-        ontouchend="swipeEnd(event,'${w.id}')">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
-          <div style="font-size:19px;font-weight:700;color:var(--tx)">${w.data.word}</div>
-          <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">${lvH(w.data)}${w.mastered?'<span class="mastered-badge">✓ 習得</span>':''}</div>
-        </div>
-        ${w.data.reading?`<div style="font-size:13px;color:${G};margin-bottom:3px;font-weight:500">${w.data.reading}</div>`:''}
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:8px;line-height:1.4">${w.data.meaning}</div>
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          ${tagH(w.lang)}
-          ${w.data.gender?genderH(w.data.gender):''}
-          ${!w.data.aiEnriched?'<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--amberb);color:var(--amber);font-weight:600">AI待機</span>':''}
-          <span style="font-size:11px;color:var(--tx3);margin-left:auto">${w.reviewCount>0?`復習${w.reviewCount}回`:'新規'}</span>
-        </div>
-      </div>
-    </div>`).join('')}`;
-}
-
-function genderH(g){
-  if(!g)return'';
-  let h='';
-  if(g.masc)h+=`<span class="g-m">m.${g.masc}</span>`;
-  if(g.fem)h+=`<span class="g-f">f.${g.fem}</span>`;
-  if(g.irregular)h+=`<span class="g-irr">不規則</span>`;
-  return h;
-}
-
-// ════════════════════════
-// ➕ ADD WORD
-// ════════════════════════
-async function fetchSuggestions(word,lang){
-  try{
-    // Wiktionary opensearch API
-    const langCode=lang==='ja'?'ja':lang==='fr'?'fr':'en';
-    const url='https://'+langCode+'.wiktionary.org/w/api.php?action=opensearch&search='+encodeURIComponent(word)+'&limit=6&format=json&origin=*';
-    const r=await fetch(url);
-    if(!r.ok)return[];
-    const d=await r.json();
-    // d[1] = array of suggestion titles
-    return(d[1]||[]).filter(s=>s.toLowerCase()!==word.toLowerCase()).slice(0,5);
-  }catch{return[];}
-}
-
-async function doLookup(){
-  const inp=document.getElementById('addInput');
-  const word=(inp?.value||S.addInput).trim();
-  if(!word)return;
-  S.addInput=word;S.addLoading=true;S.addResult=null;S.addErr='';S.addSuggestions=[];render();
-  try{
-    S.addResult=S.lang==='ja'?await lookupJa(word):S.lang==='fr'?await lookupFr(word):await lookupEn(word);
-  }catch(e){
-    S.addErr=e.message||'見つかりませんでした';
-    // Fetch suggestions
-    const suggestions=await fetchSuggestions(word,S.lang);
-    S.addSuggestions=suggestions;
-  }
-  S.addLoading=false;render();
-  setTimeout(()=>{const i=document.getElementById('addInput');if(i){i.value=word;i.focus();}},30);
-}
-
-function addH(){
-  const r=S.addResult;
-  const isManual=S.addMode==='manual';
-  return`
-    <button class="btn-back" onclick="setView('list')">← 戻る</button>
-    <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">単語を追加</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
-    ${isManual?manualAddH():dictAddH(r)}`;
-}
-
-
-function dictAddH(r){
-  return`
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <span style="background:${GL};color:#15803D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">📖 辞書</span>
-      <span>+</span>
-      <span style="background:var(--amberb);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">⚡ AI 1回</span>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:4px">
-      <input id="addInput" class="inp" style="flex:1"
-        placeholder="${S.lang==='ja'?'例：食べる、綺麗':S.lang==='fr'?'例：partir, merveilleux':'例：beautiful, adventure'}"
-        value="${S.addInput.replace(/"/g,'&quot;')}" oninput="S.addInput=this.value"
-        onkeydown="if(event.key==='Enter')doLookup()"
-        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <button onclick="doLookup()" style="padding:12px 18px;background:${N};color:#fff;border:none;border-radius:12px;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:700;flex-shrink:0"
-        ${S.addLoading?'disabled':''}>
-        ${S.addLoading?'<span class="loading-pulse">検索中</span>':'🔍 検索'}
-      </button>
-    </div>
-    ${S.addErr?`<div class="err-msg">
-      ${S.addErr}
-      ${(S.addSuggestions||[]).length?`
-        <div style="margin-top:8px;font-size:12px;color:var(--tx2);font-weight:500">もしかして：</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">
-          ${S.addSuggestions.map(s=>`<button onclick="S.addInput='${s.replace(/'/g,"\'")}';document.getElementById('addInput').value='${s.replace(/'/g,"\'")}';doLookup()" style="padding:4px 10px;background:var(--bg);border:1px solid var(--bd2);border-radius:20px;cursor:pointer;font-size:13px;font-family:inherit;color:var(--tx);font-weight:500">${s}</button>`).join('')}
-        </div>`:''}
-      <button onclick="S.addMode='manual';S.addErr='';S.addSuggestions=[];render()" style="display:block;margin-top:8px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:0">✏️ 手動で入力する →</button>
-    </div>`:''}
-    ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
-    ${r?addPreviewH(r):''}`;
-}
-
-function manualAddH(){
-  const m=S.addManual||{};
-  return`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <button onclick="S.addMode='dict';S.addErr='';render()" style="font-size:12px;padding:5px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2);font-weight:500">← 辞書検索に戻る</button>
-      <span style="font-size:12px;color:var(--tx3)">手動入力モード</span>
-    </div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">単語 <span style="color:var(--red)">*</span></div>
-      <input id="manualWord" class="inp" placeholder="${S.lang==='ja'?'例：立ち振る舞う':S.lang==='fr'?'例：se débrouiller':'例：serendipity'}"
-        value="${(m.word||'').replace(/"/g,'&quot;')}" oninput="S.addManual.word=this.value"
-        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    </div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">${S.lang==='ja'?'読み（ふりがな）':S.lang==='fr'?'発音 (IPA)':'発音 (phonetic)'}（任意）</div>
-      <input id="manualReading" class="inp" placeholder="${S.lang==='ja'?'例：たちふるまう':S.lang==='fr'?'例：/sə de.bʁu.je/':'例：/ˌser.ənˈdɪp.ɪ.ti/'}"
-        value="${(m.reading||'').replace(/"/g,'&quot;')}" oninput="S.addManual.reading=this.value"
-        autocomplete="off" spellcheck="false">
-    </div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">意味（中国語）<span style="color:var(--red)">*</span></div>
-      <input id="manualMeaning" class="inp" placeholder="例：举止得体，随机应变"
-        value="${(m.meaning||'').replace(/"/g,'&quot;')}" oninput="S.addManual.meaning=this.value">
-    </div>
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">例文（任意）</div>
-      <textarea id="manualExample" class="textarea" style="min-height:80px;font-size:14px"
-        placeholder="${S.lang==='ja'?'例：彼女は場の空気を読んで、うまく立ち振る舞った。':S.lang==='fr'?'例：Il faut savoir se débrouiller dans la vie.':'例：It was pure serendipity that we met.'}"
-        oninput="S.addManual.example=this.value">${(m.example||'')}</textarea>
-    </div>
-    ${S.addErr?`<div class="err-msg" style="margin-bottom:10px">${S.addErr}</div>`:''}
-    <button class="btn" onclick="confirmManualAdd()">
-      ＋ 単語帳に追加
-    </button>`;
-}
-
-
-function addPreviewH(r){
-  return`
-    <div class="dict-result slide-up">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#15803D;font-weight:600">📖 ${r.source}</span>
-        ${r.jlpt?`<span class="lv-badge" style="background:${LV_BG[r.jlpt]};color:${LV_FG[r.jlpt]}">${r.jlpt}</span>`:''}
-        ${r.delf?`<span class="lv-badge" style="background:${LV_BG[r.delf]};color:${LV_FG[r.delf]}">${r.delf}</span>`:''}
-      </div>
-      <div style="font-size:26px;font-weight:800;color:var(--tx);margin-bottom:4px;letter-spacing:-.01em">${r.word}</div>
-      ${r.reading?`<div style="font-size:15px;color:${G};margin-bottom:10px;font-weight:500">${r.reading} ${spkH(r.word,S.lang)}</div>`:`<div style="margin-bottom:10px">${spkH(r.word,S.lang,'発音')}</div>`}
-      <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">定義</div>
-      <div style="background:var(--bg);border-radius:10px;padding:4px 10px;margin-bottom:12px;border:1px solid rgba(34,197,94,0.2)">
-        ${(r.allSenses||[]).map(s=>`<div class="sense-item">
-          ${s.pos?`<span style="font-size:10px;color:#1D4ED8;font-weight:700;margin-right:5px;text-transform:uppercase">${s.pos}</span>`:''}
-          ${s.num?`<span style="font-size:11px;color:var(--tx3);margin-right:3px">${s.num}.</span>`:''}
-          ${s.textZh?`<span style="color:var(--tx);font-weight:500">${s.textZh}</span>`:s.text}
-          ${s.textZh&&s.textEn?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">${s.textEn}</div>`:''}
-          ${s.example?`<div style="font-size:12px;color:var(--tx3);margin-top:2px;font-style:italic">${s.example}</div>`:''}
-        </div>`).join('')}
-      </div>
-      <div style="font-size:12px;color:var(--tx3);margin-bottom:8px;font-weight:500">中国語でメモ（任意）</div>
-      <input class="inp" id="addMemo" placeholder="例：吃 / 离开，出发" style="margin-bottom:14px"
-        oninput="S.addMemo=this.value" value="${(S.addMemo||'').replace(/"/g,'&quot;')}">
-      ${S.addAiLoading?`
-        <div style="background:var(--amberb);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px">
-          <div class="loading-pulse" style="font-size:14px;color:var(--amber);font-weight:600">⚡ AIが詳細情報を生成中...</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:5px">活用・例文・搭配・語族 → 永久保存</div>
-        </div>
-        <button class="btn" disabled>追加中...</button>
-      `:`
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button class="btn-ghost" style="flex:1" onclick="confirmAdd(false)">
-            ＋ 普通追加
-          </button>
-          <button class="btn" style="flex:1" onclick="confirmAdd(true)">
-            ⚡ AI詳細付き
-          </button>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-top:6px">普通追加は即時・AI詳細は活用/例文/搭配を自動生成</div>
-      `}
-    </div>`;
-}
-
-function confirmManualAdd(){
-  // Read directly from DOM to avoid stale state
-  const word=(document.querySelector('#manualWord')?.value||S.addManual?.word||'').trim();
-  const meaning=(document.querySelector('#manualMeaning')?.value||S.addManual?.meaning||'').trim();
-  const reading=(document.querySelector('#manualReading')?.value||S.addManual?.reading||'').trim();
-  const example=(document.querySelector('#manualExample')?.value||S.addManual?.example||'').trim();
-  if(!word||!meaning){S.addErr='単語と意味は必須です';render();return;}
-  const nw={
-    id:Date.now().toString(),word,lang:S.lang,
-    data:{word,reading:(m.reading||'').trim(),meaning,
-      delf:null,jlpt:null,gender:null,pluralNote:null,
-      examples:example?[{text:example,trans:'',vocab:[]}]:[],
-      grammar:'',related:'',wordFamily:[],conjugations:null,collocations:[],
-      source:'手動入力',allSenses:[{num:1,pos:'',text:meaning}],aiEnriched:false},
-    reviewCount:0,mastered:false,addedAt:Date.now()
-  };
-  S.words=[nw,...S.words];saveWords();
-  S.addManual={word:'',reading:'',meaning:'',example:''};
-  S.addErr='';
-  celebrate();setView('list');
-}
 
 async function confirmAdd(withAI=true){
   const r=S.addResult;if(!r)return;
+  // 重複チェック
+  const existing=S.words.find(w=>w.lang===S.lang&&w.data?.word?.toLowerCase()===r.word.toLowerCase());
+  if(existing){
+    const d=new Date(existing.addedAt);
+    const dateStr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+    S.addErr=dateStr+'に追加済みです（復習'+existing.reviewCount+'回）';
+    render();return;
+  }
   const memo=document.getElementById('addMemo')?.value.trim()||S.addMemo||'';
   const meaning=memo||r.allSenses?.[0]?.text||r.meanings||'';
   const pos=r.allSenses?.[0]?.pos||'';
@@ -1082,6 +808,8 @@ async function confirmAdd(withAI=true){
       if(ai.wordFamily?.length)d.wordFamily=ai.wordFamily;
       if(ai.conjugations)d.conjugations=ai.conjugations;
       if(ai.collocations?.length)d.collocations=ai.collocations;
+      if(ai.synonymsAntonyms)d.synonymsAntonyms=ai.synonymsAntonyms;
+      if(ai.etymology)d.etymology=ai.etymology;
       d.aiEnriched=true;
       saveWords();
     }
@@ -1142,6 +870,15 @@ function detailH(){
     ${d.conjugations?conjH(d.conjugations,w.lang):''}
     ${d.collocations?.length?collocH(d.collocations):''}
     ${d.wordFamily?.length?wordFamilyH(d.wordFamily):''}
+    ${d.etymology?`
+      <div class="sec-lbl">語源・由来</div>
+      <div class="info-blk" style="font-style:italic">${d.etymology}</div>`:''}
+    ${d.synonymsAntonyms&&(d.synonymsAntonyms.synonyms?.filter(s=>s).length||d.synonymsAntonyms.antonyms?.filter(s=>s).length)?`
+      <div class="sec-lbl">類義語 / 反義語</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        ${(d.synonymsAntonyms.synonyms||[]).filter(s=>s).map(s=>`<span style="padding:5px 12px;background:var(--blueb);border:1px solid rgba(59,130,246,0.3);border-radius:var(--r-full);font-size:13px;color:var(--blue);font-weight:500">${s}</span>`).join('')}
+        ${(d.synonymsAntonyms.antonyms||[]).filter(s=>s).map(s=>`<span style="padding:5px 12px;background:var(--redb);border:1px solid rgba(239,68,68,0.2);border-radius:var(--r-full);font-size:13px;color:var(--red);font-weight:500">≠ ${s}</span>`).join('')}
+      </div>`:''}
     ${!d.aiEnriched?`
       <div class="enrich-banner">
         <span style="font-size:13px;color:var(--amber);font-weight:500">⚡ 詳細情報がまだありません</span>
@@ -1216,7 +953,7 @@ function conjH(c,lang){
       </div>`).join('');
   }
   // French
-  const nm={present:'現在形',passe:'複合過去',imparfait:'半過去',futur:'単純未来'};
+  const nm={present:'Présent',passe:'Passé composé',imparfait:'Imparfait',futur:'Futur simple'};
   const ts=Object.keys(c);if(!ts.length)return'';
   if(!c[S.tense])S.tense=ts[0];
   return`<div class="sec-lbl">動詞活用</div>
@@ -1268,6 +1005,8 @@ async function enrichWord(id){
     if(ai.wordFamily?.length)d.wordFamily=ai.wordFamily;
     if(ai.conjugations)d.conjugations=ai.conjugations;
     if(ai.collocations?.length)d.collocations=ai.collocations;
+    if(ai.synonymsAntonyms)d.synonymsAntonyms=ai.synonymsAntonyms;
+    if(ai.etymology)d.etymology=ai.etymology;
     d.aiEnriched=true;
     saveWords();render();
   }catch(e){alert('生成に失敗しました: '+e.message);}
@@ -1278,25 +1017,27 @@ async function enrichWord(id){
 // ════════════════════════
 function resetP(){
   const v=S.words.filter(w=>w.lang===S.lang);
-  S.fSess=[...v].sort(()=>Math.random()-.5);S.fIdx=0;S.fFlip=false;S.fDone=false;
+  // SRS順：期限到来の単語を優先、その後ランダム
+  const due=v.filter(w=>isDueForReview(w)).sort(()=>Math.random()-.5);
+  const notDue=v.filter(w=>!isDueForReview(w)).sort((a,b)=>nextReviewTime(a)-nextReviewTime(b));
+  S.fSess=[...due,...notDue];S.fIdx=0;S.fFlip=false;S.fDone=false;
   S.qIdx=0;S.qAns=null;S.qScore={c:0,t:0};S.qFb=null;S.qLastCorrect='';clearTimeout(S.qTimer);
 }
 function resetPFull(){S.pStopToday=false;resetP();}
 function practiceH(){
   if(S.pStopToday){
-    return `<div style="text-align:center;padding:60px 20px">
-      <div style="font-size:60px;margin-bottom:16px">🌙</div>
-      <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:var(--tx)">今日の練習お疲れ様！</div>
-      <div style="font-size:14px;color:var(--tx2);margin-bottom:28px;line-height:1.7">ゆっくり休んで<br>また明日頑張ろう 💪</div>
-      <button class="btn-ghost" onclick="resetPFull();render()">やっぱり続ける</button>
-    </div>`;
+    return '<div style="text-align:center;padding:60px 20px">'
+      +'<div style="font-size:48px;margin-bottom:16px">🌙</div>'
+      +'<div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--tx)">お疲れ様！</div>'
+      +'<div style="font-size:14px;color:var(--tx2);margin-bottom:24px">また明日復習しましょう</div>'
+      +'<button class="btn-ghost" style="max-width:200px" onclick="resetPFull();render()">続ける</button></div>';
   }
-  const body=S.pMode==='flash'?flashH():quizH(S.pMode);
-  return `
-    <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>
-    <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">${LANG[S.lang]?.flag||''} ${LANG[S.lang]?.label||S.lang}</div>
-    <div id="practiceModes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
-    ${body}`;
+  const modes=[['flash','🔁 フラッシュ'],['quiz','📝 選択問題']];
+  let h='<div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>';
+  h+='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">'+(LANG[S.lang]?.flag||'')+' '+(LANG[S.lang]?.label||S.lang)+'</div>';
+  h+='<div id="practiceModes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>';
+  h+=S.pMode==='flash'?flashH():quizH('random');
+  return h;
 }
 
 // ── Sentence practice helpers ──
@@ -1315,15 +1056,12 @@ function flashH(){
     const pct=Math.round(ok/S.fSess.length*100);
     return`<div style="text-align:center;padding:32px 20px">
       <div style="font-size:56px;margin-bottom:16px">${pct>=80?'🎉':pct>=60?'😊':'💪'}</div>
-      <div style="font-size:24px;font-weight:800;margin-bottom:8px;color:var(--tx)">ラウンド完了！</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;color:var(--tx)">ラウンド完了！</div>
       <div style="font-size:15px;color:var(--tx2);margin-bottom:6px">${ok}/${S.fSess.length}枚正解</div>
-      <div style="font-size:36px;font-weight:800;color:${G};margin-bottom:24px">${pct}%</div>
-      <div style="background:var(--bg2);border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid var(--bd)">
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">続けますか？</div>
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <button class="btn" style="flex:1" onclick="resetP();render()">もう一周 🔄</button>
-        </div>
-        <button class="btn-ghost" style="width:100%" onclick="S.pStopToday=true;render()">今日はここまで 🌙</button>
+      <div style="font-size:36px;font-weight:800;color:${G};margin-bottom:20px">${pct}%</div>
+      <div style="display:flex;gap:10px;max-width:300px;margin:0 auto">
+        <button class="btn-ghost" style="flex:1" onclick="S.pStopToday=true;render()">終了 🌙</button>
+        <button class="btn" style="flex:1" onclick="resetP();render()">もう一周 🔄</button>
       </div>
     </div>`;
   }
@@ -1331,6 +1069,12 @@ function flashH(){
   const pct=Math.round(S.fIdx/S.fSess.length*100);
   const todayCount=sentenceCountToday(w.id);
   const canSentence=todayCount<3;
+  // SM-2 info
+  const sm2=w.sm2||{};
+  const reviewCount=w.reviewCount||0;
+  const lastRev=w.lastReviewed?new Date(w.lastReviewed).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'初回';
+  const nextRev=sm2.nextReview?new Date(sm2.nextReview).toLocaleDateString('ja-JP',{month:'short',day:'numeric'}):'今日';
+
   return`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <span style="font-size:13px;color:var(--tx2);font-weight:500">${S.fIdx+1}/${S.fSess.length}</span>
@@ -1343,38 +1087,85 @@ function flashH(){
       </div>
     </div>
     <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-    <div class="flash-card" onclick="${S.fSentenceMode?'':' S.fFlip=!S.fFlip;render()'}" style="${S.fSentenceMode?'cursor:default;min-height:150px':''}">
-      <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:10px">
-        ${tagH(w.lang)} ${lvH(w.data)}
-        <button onclick="event.stopPropagation();goToWordDetail('${w.id}')" style="font-size:10px;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx3);font-family:inherit">詳細</button>
-      </div>
-      ${S.fSentenceMode?`
+
+    ${S.fSentenceMode?`
+      <div class="flash-card" style="cursor:default;min-height:150px">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:10px">
+          ${tagH(w.lang)} ${lvH(w.data)}
+          <button onclick="event.stopPropagation();goToWordDetail('${w.id}','practice')" style="font-size:10px;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx3);font-family:inherit">詳細</button>
+        </div>
         <div style="font-size:32px;font-weight:800;color:var(--tx);margin-bottom:4px">${w.data.word}</div>
         ${w.data.reading?`<div style="font-size:15px;color:${G};margin-bottom:4px;font-weight:500">${w.data.reading}</div>`:''}
-        <div style="font-size:13px;color:var(--tx2)">${w.data.meaning}</div>
-      `:S.fFlip?`
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">意味・読み</div>
-        <div style="font-size:28px;font-weight:700;margin-bottom:8px;color:var(--tx)">${w.data.meaning}</div>
-        ${w.data.reading?`<div style="font-size:16px;color:${G};margin-bottom:4px;font-weight:500">${w.data.reading}</div>`:''}
+      </div>
+      ${sentencePracticeH(w,todayCount,canSentence)}
+    `:`
+      <div class="flash-card" onclick="if(!S.fFlip){S.fFlip=true;S.fCardShown=(S.fCardShown||0)+1;render()}" style="${S.fFlip?'cursor:default':'cursor:pointer'}">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:10px">
+          ${tagH(w.lang)} ${lvH(w.data)}
+          <button onclick="event.stopPropagation();goToWordDetail('${w.id}','practice')" style="font-size:10px;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx3);font-family:inherit">詳細</button>
+        </div>
+        ${S.fFlip?`
+          <div style="font-size:36px;font-weight:800;color:var(--tx);margin-bottom:8px;letter-spacing:-.02em">${w.data.word}</div>
+          <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">
+            ${w.data.reading?`<span style="font-size:17px;color:${G};font-weight:600">${w.data.reading}</span>`:''}
+            ${spkH(w.data.word,w.lang)}
+          </div>
+          <div style="font-size:15px;color:var(--tx2);margin-bottom:8px;line-height:1.6;max-width:280px;text-align:center">${w.data.meaning}</div>
+          ${w.data.examples?.length?`<div style="font-size:13px;color:var(--tx3);font-style:italic;max-width:280px;text-align:center">${w.data.examples[0].text}</div>`:''}
+        `:`
+          <div style="font-size:42px;font-weight:800;margin:12px 0 10px;color:var(--tx);letter-spacing:-.02em">${w.data.word}</div>
+          <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>
+        `}
+      </div>
+
+      ${S.fFlip?`
+        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:8px;display:flex;justify-content:center;gap:12px">
+          <span>📅 前回: ${lastRev}</span>
+          <span>🔄 ${reviewCount}回復習</span>
+          <span>⏭ 次回: ${nextRev}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <button onclick="flashAnsAnki(0)" style="padding:12px 6px;background:#FFEBEE;color:#C62828;border:1px solid rgba(198,40,40,0.2);border-radius:12px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">
+            😵 完全忘れ<br><span style="font-size:10px;font-weight:400">1日後</span>
+          </button>
+          <button onclick="flashAnsAnki(1)" style="padding:12px 6px;background:#FFF3E0;color:#E65100;border:1px solid rgba(230,81,0,0.2);border-radius:12px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">
+            😅 難しい<br><span style="font-size:10px;font-weight:400">${Math.max(1,Math.round((sm2.interval||1)*0.5))}日後</span>
+          </button>
+          <button onclick="flashAnsAnki(3)" style="padding:12px 6px;background:#E8F5E9;color:#2E7D32;border:1px solid rgba(46,125,50,0.2);border-radius:12px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">
+            😊 記憶した<br><span style="font-size:10px;font-weight:400">${sm2.interval||1}日後</span>
+          </button>
+        </div>
+        <div style="display:flex;justify-content:center">
+          <button onclick="speak('${w.data.word.replace(/'/g,"\'")}','${w.lang}')"
+            style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:14px;cursor:pointer;font-family:inherit;color:var(--tx);font-weight:500;touch-action:manipulation;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:${G}"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+            発音を聞く
+          </button>
+        </div>
       `:`
-        <div style="font-size:40px;font-weight:800;margin:12px 0 10px;color:var(--tx);letter-spacing:-.02em">${w.data.word}</div>
-        <div style="font-size:13px;color:var(--tx3)">タップして答えを見る</div>
+        <div style="display:flex;justify-content:center;margin-bottom:10px">
+          <button onclick="speak('${w.data.word.replace(/'/g,"\'")}','${w.lang}')"
+            style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:14px;cursor:pointer;font-family:inherit;color:var(--tx);font-weight:500;touch-action:manipulation;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:${G}"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+            発音を聞く
+          </button>
+        </div>
       `}
-    </div>
-    <div style="display:flex;justify-content:center;margin-bottom:10px">
-      <button onclick="event.stopPropagation();speak('${w.data.word.replace(/'/g,"\''")}','${w.lang}')"
-        style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:14px;cursor:pointer;font-family:inherit;color:var(--tx);font-weight:500;transition:all .18s">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:${G}"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-        発音を聞く
-      </button>
-    </div>
-    ${S.fSentenceMode?sentencePracticeH(w,todayCount,canSentence):`
-      ${S.fFlip?`<div class="flash-actions">
-        <button class="btn-wrong" onclick="flashAns(false)">✗ もう一度</button>
-        <button class="btn-correct" onclick="flashAns(true)">✓ 覚えた！</button>
-      </div>`:''}
     `}`;
 }
+
+function flashAnsAnki(quality){
+  const w=S.words.find(x=>x.id===S.fSess[S.fIdx].id);
+  if(w){
+    S.fSess[S.fIdx]._ok=quality>=2;
+    sm2Update(w,quality);
+    saveWords();
+  }
+  S.fIdx++;S.fFlip=false;S.fCardShown=0;
+  if(S.fIdx>=S.fSess.length)S.fDone=true;
+  render();
+}
+
 
 function sentencePracticeH(w,todayCount,canSentence){
   const r=S.fSentenceResult;
@@ -1622,6 +1413,34 @@ const QUIZ_BANK={
   ]
 };
 
+// ── SM-2アルゴリズム ──
+// quality: 0=完全忘れ 1=ほぼ忘れ 2=難しい 3=記憶した
+// w.sm2 = {interval, repetitions, easeFactor, nextReview}
+function sm2Update(w, quality){
+  if(!w.sm2)w.sm2={interval:1,repetitions:0,easeFactor:2.5,nextReview:0};
+  const s=w.sm2;
+  if(quality>=2){
+    if(s.repetitions===0)s.interval=1;
+    else if(s.repetitions===1)s.interval=6;
+    else s.interval=Math.round(s.interval*s.easeFactor);
+    s.repetitions++;
+  }else{
+    s.repetitions=0;s.interval=1;
+  }
+  s.easeFactor=Math.max(1.3,s.easeFactor+0.1-(3-quality)*(0.08+(3-quality)*0.02));
+  s.nextReview=Date.now()+s.interval*86400000;
+  w.lastReviewed=Date.now();
+  w.reviewCount=(w.reviewCount||0)+1;
+  if((w.reviewCount||0)>=10&&s.easeFactor>=2.5)w.mastered=true;
+}
+function nextReviewTime(w){
+  if(w.sm2?.nextReview)return w.sm2.nextReview;
+  const intervals=[0,1,3,7,14,30,60,120];
+  const idx=Math.min(w.reviewCount||0,intervals.length-1);
+  return(w.lastReviewed||w.addedAt||0)+intervals[idx]*86400000;
+}
+function isDueForReview(w){return nextReviewTime(w)<=Date.now();}
+
 function getDistractors(correctWord,lang,count=3){
   const myWords=S.words.filter(w=>w.lang===lang&&w.id!==correctWord.id);
   const bank=(QUIZ_BANK[lang]||[]).filter(b=>b.word!==correctWord.data?.word);
@@ -1634,36 +1453,38 @@ function getDistractors(correctWord,lang,count=3){
 
 function quizH(mode='quiz_meaning'){
   const v=S.words.filter(w=>w.lang===S.lang);
-  if(!v.length)return`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📝</div><div style="font-weight:600;color:var(--tx)">単語を追加してください</div></div>`;
+  if(!v.length)return'<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📝</div><div style="font-weight:600;color:var(--tx)">単語を追加してください</div></div>';
 
-  // mode: quiz_meaning=単語→意味, quiz_word=意味→単語, quiz_reading=読み→単語
-  const qs=v.map(w=>{
-    const distractors=getDistractors(w,S.lang,3);
-    let question,questionSub,opts;
-    if(mode==='quiz_word'){
-      question=w.data.meaning;
-      questionSub='';
-      opts=[{text:w.data.word,wid:w.id,correct:true},...distractors.map(d=>({text:d.word,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
-    }else if(mode==='quiz_reading'&&w.data.reading){
-      question='__AUDIO__';
-      questionSub=w.data.meaning;
-      opts=[{text:w.data.word,wid:w.id,correct:true},...distractors.map(d=>({text:d.word,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
-    }else{
-      question=w.data.word;
-      questionSub=w.data.reading||'';
-      opts=[{text:w.data.meaning,wid:w.id,correct:true},...distractors.map(d=>({text:d.meaning,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
-    }
-    return{...w,question,questionSub,opts};
+  // SRS順にソート（次に復習すべき単語を優先）
+  const now=Date.now();
+  const sorted=[...v].sort((a,b)=>{
+    const na=nextReviewTime(a),nb=nextReviewTime(b);
+    return na-nb;
   });
 
-  if(!qs.length)return`<div class="empty-state">この問題形式に対応した単語がありません</div>`;
-  const q=qs[S.qIdx%qs.length];
+  const qs=sorted.map(w=>{
+    const distractors=getDistractors(w,S.lang,3);
+    // ランダムにモードを選択（発音は読みがある場合のみ）
+    const availModes=['meaning','word'];
+    if(w.data.reading)availModes.push('reading');
+    const m=mode==='quiz_meaning'?'meaning':mode==='quiz_word'?'word':mode==='quiz_reading'?'reading':availModes[Math.floor(Math.random()*availModes.length)];
+    let question,questionSub,opts,qMode=m;
+    if(m==='word'){
+      question=w.data.meaning;questionSub='';
+      opts=[{text:w.data.word,wid:w.id,correct:true},...distractors.map(d=>({text:d.word,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
+    }else if(m==='reading'&&w.data.reading){
+      question='__AUDIO__';questionSub='';
+      opts=[{text:w.data.word,wid:w.id,correct:true},...distractors.map(d=>({text:d.word,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
+    }else{
+      qMode='meaning';
+      question=w.data.word;questionSub=w.data.reading||'';
+      opts=[{text:w.data.meaning,wid:w.id,correct:true},...distractors.map(d=>({text:d.meaning,wid:d.id,correct:false}))].sort(()=>Math.random()-.5);
+    }
+    return{...w,question,questionSub,opts,qMode};
+  });
 
-  const modeLabel={
-    quiz_meaning:'単語 → 意味',
-    quiz_word:'意味 → 単語',
-    quiz_reading:'読み → 単語'
-  }[mode]||'';
+  const q=qs[S.qIdx%qs.length];
+  const modeLabel={meaning:'単語 → 意味',word:'意味 → 単語',reading:'発音 → 単語'}[q.qMode]||'';
 
   return`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1673,7 +1494,7 @@ function quizH(mode='quiz_meaning'){
     <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(S.qScore.t/(qs.length||1)*100)}%"></div></div>
     <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase">
-        ${{quiz_meaning:'どういう意味？',quiz_word:'どの単語？',quiz_reading:'発音を聞いて単語を選ぶ'}[mode]||''}
+        ${{meaning:'どういう意味？',word:'どの単語？',reading:'発音を聞いて単語を選ぶ'}[q.qMode]||''}
       </div>
       ${q.question==='__AUDIO__'?`
         <div style="margin-bottom:12px">
@@ -1682,45 +1503,28 @@ function quizH(mode='quiz_meaning'){
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
             発音を聞く
           </button>
-          ${q.questionSub?`<div style="font-size:13px;color:var(--tx3);text-align:center;margin-top:8px">ヒント：${q.questionSub}</div>`:''}
         </div>
       `:`
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-          <span style="font-size:${mode==='quiz_meaning'?'24':'18'}px;font-weight:800;color:var(--tx)">${q.question}</span>
-          ${mode==='quiz_meaning'?`${lvH(q.data)}${spkH(q.data.word,q.lang)}`:''}
+          <span style="font-size:${q.qMode==='meaning'?'24':'18'}px;font-weight:800;color:var(--tx)">${q.question}</span>
+          ${q.qMode==='meaning'?`${lvH(q.data)}${spkH(q.data.word,q.lang)}`:''}
         </div>
         ${q.questionSub?`<div style="font-size:14px;color:${G};font-weight:500">${q.questionSub}</div>`:''}
       `}
     </div>
-    ${S.qFb?`<div class="quiz-fb ${S.qFb}">${S.qFb==='correct'?'✓ 正解！':'✗ 不正解'}</div>`:''}
-    ${S.qFb?`<div style="background:${S.qFb==='correct'?'var(--glb)':'var(--redb)'};border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:${S.qFb==='correct'?'var(--gd)':'var(--red)'};">${S.qFb==='correct'?'✓ 正解！':'✗ 不正解'}</div>
-        ${S.qLastCorrect?`<div style="font-size:13px;color:var(--tx2);margin-top:4px">正解：<strong>${S.qLastCorrect}</strong></div>`:''}
-      </div>
-      <button onclick="quizNext()" style="padding:10px 20px;background:var(--n);color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;touch-action:manipulation;">次へ →</button>
-    </div>`:''}
+    ${S.qAns!==null?`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:10px 14px;background:${S.qFb==='correct'?'var(--glb)':'var(--redb)'};border-radius:12px">
+        <span style="font-size:14px;font-weight:700;color:${S.qFb==='correct'?'var(--gd)':'var(--red)'}">${S.qFb==='correct'?'✓ 正解！':'✗ 不正解'}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="goToWordDetail('${q.id}')" style="font-size:12px;padding:4px 10px;background:transparent;border:1px solid var(--bd2);border-radius:20px;cursor:pointer;font-family:inherit;color:var(--tx2)">詳細</button>
+          <button onclick="quizNext()" style="padding:8px 18px;background:var(--n);color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">次へ →</button>
+        </div>
+      </div>`:''}
     ${q.opts.map((opt,i)=>{
       let cls='quiz-opt';
-      if(S.qAns!==null){
-        if(opt.correct)cls+=' correct';
-        else if(i===S.qAns&&S.qFb==='wrong')cls+=' wrong';
-      }
+      if(S.qAns!==null){if(opt.correct)cls+=' correct';else if(i===S.qAns)cls+=' wrong';}
       return`<button class="${cls}" ${S.qAns!==null?'disabled':''} onclick="quizAns(${opt.correct?1:0},${i},'${opt.text.replace(/'/g,"\'")}')"><span>${opt.text}</span></button>`;
     }).join('')}`;
-}
-
-// ── 練習タブ切り替え（グローバル関数）──
-function setPMode(k){S.pMode=k;S.fSentenceMode=false;resetP();render();}
-function toggleSentenceMode(){S.fSentenceMode=!S.fSentenceMode;S.fSentenceResult=null;S.fSentenceInput='';S.fSentenceErr='';render();}
-
-function goToWordDetail(wordId){
-  if(!wordId)return;
-  const w=S.words.find(x=>x.id===wordId);
-  if(!w)return;
-  S.sel=w;S.tab='words';S.view='detail';S.tense='present';
-  render();
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab==='words'));
 }
 
 function quizAns(ok,i,optText){
@@ -1732,11 +1536,7 @@ function quizAns(ok,i,optText){
 function quizNext(){
   S.qIdx++;S.qAns=null;S.qFb=null;S.qLastCorrect='';render();
 }
-function flashAns(ok){
-  S.fSess[S.fIdx]._ok=ok;
-  if(ok){const w=S.words.find(x=>x.id===S.fSess[S.fIdx].id);if(w){w.reviewCount++;if(w.reviewCount>=5)w.mastered=true;saveWords();}}
-  S.fIdx++;S.fFlip=false;if(S.fIdx>=S.fSess.length)S.fDone=true;render();
-}
+function flashAns(ok){flashAnsAnki(ok?3:0);}
 
 // ════════════════════════
 // 🖊️ WRITING
@@ -1985,15 +1785,24 @@ function removeFromWhitelist(email){
 
 function ebiH(){
   const sc={};
-  S.words.filter(w=>w.lang===S.lang).forEach(w=>EBI.forEach(d=>{
-    const dt=new Date(w.addedAt+d*86400000);dt.setHours(0,0,0,0);
-    const k=dt.getTime();sc[k]=(sc[k]||0)+1;
-  }));
+  S.words.filter(w=>w.lang===S.lang).forEach(w=>{
+    // SRS間隔に基づいて次回復習日を計算
+    const intervals=[1,3,7,14,30,60];
+    const nextIdx=Math.min(w.reviewCount||0,intervals.length-1);
+    const nextDays=intervals[nextIdx];
+    const base=w.lastReviewed||w.addedAt||0;
+    const dt=new Date(base+nextDays*86400000);dt.setHours(0,0,0,0);
+    const k=dt.getTime();
+    if(!sc[k])sc[k]=new Set();
+    sc[k].add(w.id);
+  });
+  // Set → count
+  const scCount={};Object.entries(sc).forEach(([k,s])=>scCount[k]=s.size);
   const today=new Date();today.setHours(0,0,0,0);
   const cells=[];
   for(let i=0;i<14;i++){
     const d=new Date(today.getTime()+i*86400000);
-    const count=sc[d.getTime()]||0;
+    const count=scCount[d.getTime()]||0;
     cells.push({d,count,cls:i===0?'ebi-today':count===0?'ebi-none':count<=2?'ebi-light':count<=4?'ebi-med':'ebi-heavy'});
   }
   const total=cells.reduce((s,c)=>s+c.count,0);
@@ -2252,7 +2061,7 @@ function render(){
     sc.innerHTML=practiceH();
     const tabsDiv=document.getElementById('practiceModes');
     if(tabsDiv){
-      const modes=[['flash','🔁 フラッシュ'],['quiz_meaning','📖 意味選択'],['quiz_word','✍️ 単語選択'],['quiz_reading','🔊 発音→単語']];
+      const modes=[['flash','🔁 フラッシュ'],['quiz','📝 選択問題']];
       modes.forEach(([k,l])=>{
         const btn=document.createElement('button');
         btn.textContent=l;
@@ -2270,6 +2079,17 @@ function render(){
   else sc.innerHTML=statsH();
 }
 
+function goBackFromDetail(){
+  if(S.detailReturnTab&&S.detailReturnTab!=='words'){
+    S.tab=S.detailReturnTab;S.view=S.detailReturnView||'list';
+    S.detailReturnTab=null;S.detailReturnView=null;
+    render();
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===S.tab));
+  }else{
+    S.detailReturnTab=null;S.detailReturnView=null;
+    setView('list');
+  }
+}
 function setView(v){
   S.view=v;
   if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addSuggestions=[];S.addMemo='';S.addAiLoading=false;S.addMode='dict';S.addManual={word:'',reading:'',meaning:'',example:''};}  
