@@ -1402,11 +1402,35 @@ function statsH(){
     <div class="week-dots">
       ${['日','月','火','水','木','金','土'].map((d,i)=>`<div class="day-dot ${(today===0?i<=6:i<today)?'day-done':'day-todo'}">${d}</div>`).join('')}
     </div>
-    ${Object.keys(lv).length?`
-      <div class="sec-lbl">レベル分布</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-        ${Object.entries(lv).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#eee'};color:${LV_FG[k]||'#333'}">${k}: ${n}語</span>`).join('')}
-      </div>`:''}
+    ${(()=>{
+      // 全言語のレベル分布（法語DELF・日語JLPT・英語は独自）
+      const allWords=S.words.filter(w=>S.enabledLangs[w.lang]);
+      const byLang={};
+      allWords.forEach(w=>{
+        const lang=w.lang;
+        const lv=w.data&&(w.data.delf||w.data.jlpt)||null;
+        if(!byLang[lang])byLang[lang]={total:0,leveled:0,lvs:{}};
+        byLang[lang].total++;
+        if(lv){byLang[lang].leveled++;byLang[lang].lvs[lv]=(byLang[lang].lvs[lv]||0)+1;}
+      });
+      const langNames={fr:'フランス語',ja:'日本語',en:'英語'};
+      const parts=Object.entries(byLang).map(([lang,data])=>{
+        const flag=(LANG[lang]&&LANG[lang].flag)||'';
+        const noLevel=data.total-data.leveled;
+        const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'};margin:2px;">${k} ${n}語</span>`).join('');
+        if(!lvBadges)return'';return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600;color:var(--tx)">${flag} ${langNames[lang]||lang}</span>
+            <span style="font-size:12px;color:var(--tx3)">${data.total}語</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">
+            ${lvBadges}
+            
+          </div>
+        </div>`;
+      }).join('');
+      return parts?`<div class="sec-lbl">レベル分布</div>${parts}`:'';
+    })()}
     ${ebiH()}
     ${(()=>{try{return isAdmin(U&&U.email)?whitelistAdminH():'';}catch{return '';}})()}
     <div class="sec-lbl">言語設定</div>
