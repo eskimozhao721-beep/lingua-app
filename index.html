@@ -483,7 +483,7 @@ async function callApi(prompt,max=1000,model='claude-haiku-4-5-20251001'){
   return d.content.map(i=>i.text||'').join('');
 }
 async function callApiSonnet(prompt,max=1000){
-  return callApi(prompt,max,'claude-sonnet-4-20250514');
+  return callApi(prompt,max,'claude-sonnet-4-6');
 }
 
 // ═══════════════════════
@@ -1384,7 +1384,9 @@ async function doWriting(){
   if(today>=1&&!S.wEssayId){S.wErr=' 今日はすでに1篇書きました。明日（'+tomorrowStr()+'）また書いてみよう！';render();return;}
   if(today>=3||S.wRevCount>=3){S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね ';render();return;}
   S.wLoad=true;S.wErr='';render();
-  const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
+  const _twAll=WRITING_TOPICS[S.lang];
+  const _tdiff=S.wDifficulty||'B1';
+  const topics=(_twAll&&!Array.isArray(_twAll))?(_twAll[_tdiff]||Object.values(_twAll)[0]):(_twAll||WRITING_TOPICS.en);
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
   const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
