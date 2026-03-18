@@ -415,7 +415,7 @@ let S={
   enabledLangs:{fr:true,ja:true,en:false},
   tense:'present',wDifficulty:'B1',sortDir:'asc',fSentenceMode:false,fSentenceInput:'',addExample:'',fSentenceResult:null,fSentenceErr:'',fSentenceLoading:false,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,wDifficulty:'B1',sortDir:'desc',wLastTopicDate:null,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,
   // add
-  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',
+  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',addSuggestions:[],addSugLoading:false,
   // practice
   pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,
   qIdx:0,qAns:null,qScore:{c:0,t:0},qFb:null,qTimer:null,
@@ -838,6 +838,8 @@ async function doLookup(){
   }
   S.addLoading=false;render();
   setTimeout(()=>{const i=document.getElementById('addInput');if(i){i.value=word;i.focus();}},30);
+  // For French: fetch similar word suggestions asynchronously
+  if(S.lang==='fr'){fetchFrSuggestions(word);}
 }
 
 
@@ -880,6 +882,20 @@ function addH(){
       </div>
     `:''}
     ${S.addLoading?`<div class="info-blk loading-pulse" style="text-align:center;padding:28px;margin-top:14px">辞書を検索中...</div>`:''}
+    ${S.lang==='fr'&&(S.addSugLoading||S.addSuggestions.length)?`
+      <div style="margin-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
+          ${S.addSugLoading?'関連単語を探し中...':'もしかして・関連語'}
+        </div>
+        ${S.addSugLoading?`<div class="loading-pulse" style="font-size:13px;color:var(--tx3)">...</div>`:`
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${S.addSuggestions.map(s=>`
+              <button onclick="S.addInput='${s.word.replace(/'/g,"\\'")}';S.addSuggestions=[];S.addResult=null;S.addErr='';doLookup();"
+                style="padding:6px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-full);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--tx);touch-action:manipulation;">
+                ${s.word}
+              </button>`).join('')}
+          </div>`}
+      </div>`:''}
     ${r?addPreviewH(r):''}`;
 }
 
@@ -927,8 +943,34 @@ function addPreviewH(r){
     </div>`;
 }
 
+// ── Levenshtein distance for spelling similarity ──
+function levenshtein(a,b){
+  const m=a.length,n=b.length;
+  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i?j?0:i:j));
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+async function fetchFrSuggestions(word){
+  S.addSuggestions=[];S.addSugLoading=true;render();
+  try{
+    // Use Wiktionary opensearch: returns words starting with or similar to input
+    const url='https://en.wiktionary.org/w/api.php?action=opensearch&search='+encodeURIComponent(word)+'&limit=20&namespace=0&format=json&origin=*';
+    const r=await fetch(url);
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    const candidates=(d[1]||[]) // array of matching titles
+      .filter(w=>w!==word&&/^[a-zàâçéèêëîïôûùüÿæœ'-]+$/i.test(w)&&w.length>=2) // French chars only, exclude input
+      .map(w=>({word:w,dist:levenshtein(word.toLowerCase(),w.toLowerCase())}))
+      .sort((a,b)=>a.dist-b.dist)
+      .slice(0,5)
+      .map(x=>({word:x.word}));
+    S.addSuggestions=candidates;
+  }catch{}
+  S.addSugLoading=false;render();
+}
 function setManualType(type){
-  const isSent=type==='sentence';
   document.getElementById('manualIsSentenceVal').value=isSent?'true':'false';
   const wordBtn=document.getElementById('manualTypeWord');
   const sentBtn=document.getElementById('manualTypeSent');
@@ -1526,6 +1568,7 @@ async function doWritingFS(){
 
 function writingResultH(topic){
   const r=S.wResult;
+  const originalText=S.wText||'';
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em">添削結果</div>
@@ -1533,6 +1576,8 @@ function writingResultH(topic){
     </div>
     <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${topic.title}</div>
     ${r.score?`<div class="score-badge">総合評価 ${r.score}/10 ${r.score>=8?'':r.score>=6?'':''}</div>`:''}
+    <div class="sec-lbl">あなたの原文</div>
+    <div class="info-blk" style="line-height:1.8;white-space:pre-wrap;color:var(--tx2)">${originalText}</div>
     ${r.corrected?`<div class="c-ok">
       <div class="c-lbl">✓ 修正後の文章</div>
       <div style="font-size:14px;color:var(--tx);line-height:1.8;margin-bottom:12px">${r.corrected}</div>
@@ -2152,7 +2197,7 @@ function render(){
 
 function setView(v){
   S.view=v;
-  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';S.addAiLoading=false;}
+  if(v==='add'){S.addInput='';S.addResult=null;S.addErr='';S.addMemo='';S.addExample='';S.addAiLoading=false;S.addSuggestions=[];S.addSugLoading=false;}
   if(v==='list')S.sel=null;
   render();
 }
