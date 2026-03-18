@@ -2333,6 +2333,7 @@ function sentencePracticeH(w,todayCount,canSentence){
       </button>
     `:`
       ${r.score?`<div class="score-badge" style="margin-bottom:10px">評価 ${r.score}/10 ${r.score>=8?'🎉':r.score>=6?'😊':'💪'}</div>`:''}
+      ${S.fSentenceInput?`<div class="info-blk" style="margin-bottom:8px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">あなたの文</div><div style="font-size:14px;color:var(--tx2);line-height:1.6">${S.fSentenceInput}</div></div>`:''}
       ${r.corrected?`<div class="c-ok" style="margin-bottom:8px"><div class="c-lbl">✓ 修正後</div><div style="font-size:14px;color:var(--tx);line-height:1.7">${r.corrected}</div></div>`:''}
       ${r.note?`<div class="c-fix" style="margin-bottom:10px"><div class="c-lbl">💡 アドバイス</div><div style="font-size:13px;color:var(--tx)">${r.note}</div></div>`:''}
       <div class="flash-actions">
