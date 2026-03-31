@@ -227,8 +227,9 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .wf-footer{padding:10px 16px;padding-bottom:max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--bd);flex-shrink:0;}
 
 /* ── FAB (floating add button) ── */
-.fab{position:fixed;right:20px;bottom:calc(70px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:var(--g);color:#fff;border:none;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(34,197,94,0.45);z-index:30;transition:transform .18s,box-shadow .18s;touch-action:manipulation;}
+.fab{position:fixed;right:20px;bottom:calc(76px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:var(--g);color:#fff;border:none;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(34,197,94,0.45);z-index:19;transition:transform .18s,box-shadow .18s;touch-action:manipulation;}
 .fab:active{transform:scale(0.92);box-shadow:0 2px 8px rgba(34,197,94,0.3);}
+@media(min-width:430px){.fab{right:calc(50vw - 430px/2 + 20px);}}
 .enrich-banner{background:var(--amberb);border:1px solid rgba(245,158,11,0.3);border-radius:var(--r-sm);padding:11px 14px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 
 /* ── Animations ── */
