@@ -226,7 +226,9 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .wf-textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(34,197,94,0.12);}
 .wf-footer{padding:10px 16px;padding-bottom:max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--bd);flex-shrink:0;}
 
-/* ── Ai enrich banner ── */
+/* ── FAB (floating add button) ── */
+.fab{position:fixed;right:20px;bottom:calc(70px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:var(--g);color:#fff;border:none;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(34,197,94,0.45);z-index:30;transition:transform .18s,box-shadow .18s;touch-action:manipulation;}
+.fab:active{transform:scale(0.92);box-shadow:0 2px 8px rgba(34,197,94,0.3);}
 .enrich-banner{background:var(--amberb);border:1px solid rgba(245,158,11,0.3);border-radius:var(--r-sm);padding:11px 14px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 
 /* ── Animations ── */
@@ -692,9 +694,20 @@ function stopAudioPlayback(){
 }
 async function startAudioPlayback(){
   if(S.audioPlaying){stopAudioPlayback();return;}
-  const list=S.wordsView==='sentences'
-    ?S.words.filter(w=>w.lang===S.lang&&w.isSentence)
-    :S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
+  // Follow same sort as wordsListH
+  const allForLang=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
+  const dir=(S.sortDir||'desc')==='asc'?1:-1;
+  let allSorted=[...allForLang].sort((a,b)=>-dir*(b.addedAt-a.addedAt));
+  if(S.sortMode==='mastery')allSorted=[...allForLang].sort((a,b)=>dir*((b.reviewCount||0)-(a.reviewCount||0)));
+  if(S.sortMode==='level')allSorted=[...allForLang].sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99)));
+  // Apply level filter
+  const list=allSorted.filter(w=>{
+    if(S.filterLevel&&S.filterLevel!==''){
+      const lv=w.data&&(w.data.jlpt||w.data.delf);
+      return lv===S.filterLevel;
+    }
+    return true;
+  });
   if(!list.length)return;
   _audioStop=false;S.audioPlaying=true;render();
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
@@ -811,18 +824,17 @@ function wordsListH(){
         📖 例句 ${words.filter(w=>w.isSentence).length}
       </button>
     </div>
-    <button class="add-btn" onclick="setView('add')">
-      <span style="font-size:16px">＋</span> 新しい単語を追加
-    </button>
+    <button class="add-btn" onclick="setView('add')" style="display:none"></button>
     <div class="sort-bar" ${S.wordsView==='sentences'?'style="display:none"':''}>
       ${[['time','追加順'],['mastery','⭐ 習得度'],['level','難易度']].map(([k,l])=>{const a=S.sortMode===k;const ar=a?((S.sortDir||'desc')==='asc'?' ↑':' ↓'):'';return`<button class="sort-btn${a?' active':''}" onclick="if(S.sortMode==='${k}'){S.sortDir=(S.sortDir||'desc')==='desc'?'asc':'desc';}else{S.sortMode='${k}';S.sortDir='desc';}render()">${l}${ar}</button>`;}).join('')}
-      <div style="width:1px;background:var(--bd);flex-shrink:0;margin:0 2px"></div>
-      ${(()=>{
-        const levels=S.lang==='fr'?['A1','A2','B1','B2','C1']:S.lang==='ja'?['N5','N4','N3','N2','N1']:[];
-        if(!levels.length)return'';
-        return[['','全て'],...levels.map(l=>[l,l])].map(([k,l])=>`<button class="sort-btn${S.filterLevel===k?' active':''}" onclick="S.filterLevel='${k}';render()" style="${S.filterLevel===k?'':'font-weight:400'}">${l}</button>`).join('');
-      })()}
     </div>
+    ${(()=>{
+      const levels=S.lang==='fr'?['A1','A2','B1','B2','C1']:S.lang==='ja'?['N5','N4','N3','N2','N1']:[];
+      if(!levels.length||S.wordsView==='sentences')return'';
+      return`<div class="sort-bar" style="margin-top:-6px">
+        ${[['','全て'],...levels.map(l=>[l,l])].map(([k,l])=>`<button class="sort-btn${(S.filterLevel||'')===''+k?' active':''}" onclick="S.filterLevel='${k}';render()" style="${(S.filterLevel||'')===''+k?'':'font-weight:400'}">${l||'全て'}</button>`).join('')}
+      </div>`;
+    })()}
     ${words.length===0?`<div class="empty-state">
       <div style="font-size:40px;margin-bottom:12px"></div>
       <div style="font-weight:600;color:var(--tx);margin-bottom:6px">まだ単語がありません</div>
@@ -2330,6 +2342,7 @@ function showApp(){
       </div>
       <div class="screen" id="screen"></div>
       <div id="fs-mount"></div>
+      <button id="fab-add" class="fab" onclick="setView('add')" style="display:none">＋</button>
       <nav class="navbar">
         <div class="nav-item active" data-tab="words" onclick="switchTab('words')">
           <span class="nav-icon">
@@ -2359,6 +2372,9 @@ function showApp(){
 function render(){
   const sc=document.getElementById('screen');if(!sc)return;
   const fm=document.getElementById('fs-mount');
+  const fab=document.getElementById('fab-add');
+  // FAB: show only on words list view
+  if(fab)fab.style.display=(S.tab==='words'&&S.view==='list')?'flex':'none';
   if(S.tab==='writing'&&S.wFullscreen){
     if(fm)fm.innerHTML=fullscreenH(getWritingTopic().topic);
     return;
