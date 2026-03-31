@@ -415,7 +415,7 @@ let S={
   enabledLangs:{fr:true,ja:true,en:false},
   tense:'present',wDifficulty:'B1',sortDir:'asc',fSentenceMode:false,fSentenceInput:'',addExample:'',fSentenceResult:null,fSentenceErr:'',fSentenceLoading:false,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,wDifficulty:'B1',sortDir:'desc',wLastTopicDate:null,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,
   // add
-  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',addSuggestions:[],addSugLoading:false,
+  addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',addSuggestions:[],addSugLoading:false,filterLevel:null,
   // practice
   pMode:'flash',fIdx:0,fFlip:false,fSess:[],fDone:false,
   qIdx:0,qAns:null,qScore:{c:0,t:0},qFb:null,qTimer:null,
@@ -795,7 +795,12 @@ function wordsListH(){
   return`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
       <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em">単語帳</div>
-      <div style="font-size:13px;color:var(--tx2);font-weight:500">${LANG[S.lang]?.flag} ${words.filter(w=>!w.isSentence).length}語</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:13px;color:var(--tx2);font-weight:500">${LANG[S.lang]?.flag} ${words.filter(w=>!w.isSentence).length}語</div>
+        ${S.audioPlaying
+          ?`<button onclick="stopAudioPlayback()" style="padding:5px 12px;border-radius:var(--r-full);border:1.5px solid var(--red);background:var(--redb);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;">■ 停止</button>`
+          :`<button onclick="startAudioPlayback()" style="padding:5px 12px;border-radius:var(--r-full);border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;touch-action:manipulation;">▶ 聴く</button>`}
+      </div>
     </div>
     
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -809,21 +814,28 @@ function wordsListH(){
     <button class="add-btn" onclick="setView('add')">
       <span style="font-size:16px">＋</span> 新しい単語を追加
     </button>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button onclick="startAudioPlayback()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:6px;">
-        ▶ 順番に聴く
-      </button>
-      ${S.audioPlaying?`<button onclick="stopAudioPlayback()" style="padding:10px 14px;border-radius:var(--r);border:1.5px solid var(--red);background:var(--redb);color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;">■ 停止</button>`:''}
-    </div>
     <div class="sort-bar" ${S.wordsView==='sentences'?'style="display:none"':''}>
       ${[['time','追加順'],['mastery','⭐ 習得度'],['level','難易度']].map(([k,l])=>{const a=S.sortMode===k;const ar=a?((S.sortDir||'desc')==='asc'?' ↑':' ↓'):'';return`<button class="sort-btn${a?' active':''}" onclick="if(S.sortMode==='${k}'){S.sortDir=(S.sortDir||'desc')==='desc'?'asc':'desc';}else{S.sortMode='${k}';S.sortDir='desc';}render()">${l}${ar}</button>`;}).join('')}
+      <div style="width:1px;background:var(--bd);flex-shrink:0;margin:0 2px"></div>
+      ${(()=>{
+        const levels=S.lang==='fr'?['A1','A2','B1','B2','C1']:S.lang==='ja'?['N5','N4','N3','N2','N1']:[];
+        if(!levels.length)return'';
+        return[['','全て'],...levels.map(l=>[l,l])].map(([k,l])=>`<button class="sort-btn${S.filterLevel===k?' active':''}" onclick="S.filterLevel='${k}';render()" style="${S.filterLevel===k?'':'font-weight:400'}">${l}</button>`).join('');
+      })()}
     </div>
     ${words.length===0?`<div class="empty-state">
       <div style="font-size:40px;margin-bottom:12px"></div>
       <div style="font-weight:600;color:var(--tx);margin-bottom:6px">まだ単語がありません</div>
       <div>上のボタンから最初の単語を追加しましょう</div>
     </div>`:''}
-    ${words.filter(w=>S.wordsView==='sentences'?w.isSentence:!w.isSentence).map(w=>`
+    ${words.filter(w=>{
+      if(S.wordsView==='sentences'?!w.isSentence:w.isSentence)return false;
+      if(S.filterLevel&&S.filterLevel!==''){
+        const lv=w.data&&(w.data.jlpt||w.data.delf);
+        if(lv!==S.filterLevel)return false;
+      }
+      return true;
+    }).map(w=>`
     <div class="word-card-wrap">
       <div class="word-card-del" id="wdel-${w.id}" onclick="confirmDeleteWord('${w.id}')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -1375,20 +1387,28 @@ function markReviewedToday(wordId){markReviewedTodayKey(wordId);}
 function resetP(){
   const reviewed=reviewedTodaySet();
   const all=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
-  const now=Date.now();
-  // Due today: nextReview <= now, AND not yet reviewed today
+  // Due: SM2 says review now, not yet done today
   const due=all.filter(w=>!reviewed.has(w.id)&&isDueForReview(w));
-  // New words (never reviewed): always include
-  const newWords=all.filter(w=>!reviewed.has(w.id)&&!w.lastReviewed&&!isDueForReview(w));
-  // Sort: due first (by urgency), then new
-  const dueSorted=[...due].sort((a,b)=>(nextReviewTime(a))-(nextReviewTime(b)));
+  // New: never reviewed at all
+  const newWords=all.filter(w=>!reviewed.has(w.id)&&!w.lastReviewed&&!w.sm2);
+  const dueSorted=[...due].sort((a,b)=>nextReviewTime(a)-nextReviewTime(b));
   S.fSess=[...dueSorted,...newWords];
   S.fIdx=0;S.fFlip=false;S.fDone=false;
   S.qIdx=0;S.qAns=null;S.qScore={c:0,t:0};S.qFb=null;S.qSess=null;clearTimeout(S.qTimer);
 }
 function practiceH(){
+  const all=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
+  const reviewed=reviewedTodaySet();
+  const dueCount=all.filter(w=>!reviewed.has(w.id)&&isDueForReview(w)).length;
+  const newCount=all.filter(w=>!reviewed.has(w.id)&&!w.lastReviewed&&!w.sm2).length;
   return`
-    <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px">練習</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:22px;font-weight:800;color:var(--tx);letter-spacing:-.02em">練習</div>
+      <div style="display:flex;gap:5px">
+        ${dueCount?`<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--amberb);color:var(--amber);font-weight:700">📅 復習 ${dueCount}</span>`:''}
+        ${newCount?`<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--blueb);color:var(--blue);font-weight:700">🆕 新規 ${newCount}</span>`:''}
+      </div>
+    </div>
     <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">${LANG[S.lang]?.flag} ${LANG[S.lang]?.label}</div>
     <div class="mode-tabs">
       ${[['flash',' フラッシュカード'],['quiz','✍️ 選択問題']].map(([k,l])=>
@@ -2441,7 +2461,11 @@ function nextReviewTime(w){
   if(w.sm2&&w.sm2.nextReview)return w.sm2.nextReview;
   const i=[0,1,3,7,14,30,60,120];return(w.lastReviewed||w.addedAt||0)+i[Math.min(w.reviewCount||0,i.length-1)]*86400000;
 }
-function isDueForReview(w){return nextReviewTime(w)<=Date.now();}
+function isDueForReview(w){
+  // Never reviewed = new word, not "due" in SM2 sense
+  if(!w.lastReviewed&&!w.sm2)return false;
+  return nextReviewTime(w)<=Date.now();
+}
 function flashAnsAnki(quality){
   const w=S.words.find(x=>x.id===S.fSess[S.fIdx].id);
   if(w){S.fSess[S.fIdx]._ok=quality>=2;sm2Update(w,quality);markReviewedToday(w.id);saveWords();}
