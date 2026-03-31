@@ -451,14 +451,19 @@ function loadAll(){
 let _syncTimer=null;
 function debouncedSync(){clearTimeout(_syncTimer);_syncTimer=setTimeout(()=>{if(_syncMode==='gist')pushToGist();},3000);}
 const MILESTONE_EMOJIS={10:'🌱',20:'🌿',30:'🌳',50:'🏆',100:'🎓',200:'🚀',500:'👑'};
+const MILESTONE_MSG={
+  fr:(n,em)=>`${em} Bravo ! Tu as appris ${n} mots !`,
+  ja:(n,em)=>`${em} すごい！${n}語も覚えた！`,
+  en:(n,em)=>`${em} Amazing! You've learned ${n} words!`,
+};
 const saveWords=()=>{
   const prev=S.words.filter(w=>w.lang===S.lang&&!w.isSentence).length;
   lsSet(wKey(),JSON.stringify(S.words));debouncedSync();
-  // Milestone check — after adding, check count
   const curr=S.words.filter(w=>w.lang===S.lang&&!w.isSentence).length;
   if(curr>prev&&curr%10===0){
     const em=MILESTONE_EMOJIS[curr]||'🎉';
-    setTimeout(()=>showToast(`${em} ${LANG[S.lang]?.flag||''} ${curr}語達成！すごい！`,3500),600);
+    const msg=(MILESTONE_MSG[S.lang]||MILESTONE_MSG.en)(curr,em);
+    setTimeout(()=>showToast(msg,3500),600);
   }
 };
 const saveEssays=()=>{lsSet(eKey(),JSON.stringify(S.wHistory));debouncedSync();};
@@ -1071,9 +1076,9 @@ function manualAdd(){
   // Duplicate check
   const dup=S.words.find(w=>w.lang===S.lang&&w.data&&w.data.word&&w.data.word.toLowerCase()===word.toLowerCase());
   if(dup){const d=new Date(dup.addedAt);S.addErr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日に追加済みです（復習'+dup.reviewCount+'回）';render();return;}
-  // isSentence: read from toggle button state (manualIsSentenceVal hidden input)
+  // isSentence: strictly follow the toggle button the user selected
   const isSentenceVal=document.getElementById('manualIsSentenceVal')?.value;
-  const isSentence=isSentenceVal==='true'||(word.includes(' ')||word.length>30);
+  const isSentence=isSentenceVal==='true';
   const nw={id:Date.now().toString(),word,lang:S.lang,isSentence,
     data:{word,reading,meaning,
       delf:null,jlpt:null,gender:null,pluralNote:null,
@@ -1126,10 +1131,12 @@ async function confirmAdd(){
   }
   // Save immediately
   const isSentenceEntry=document.getElementById('addIsSentence')?.checked||false;
+  const exText=(document.getElementById('addExample')?.value||S.addExample||'').trim();
+  const initExamples=exText?[{text:exText,trans:''}]:[];
   const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence:isSentenceEntry,
     data:{word:r.word,reading:r.reading||'',meaning,
       delf:S.lang==='fr'?r.delf||null:null,jlpt:S.lang==='ja'?r.jlpt||null:null,
-      gender:null,pluralNote:null,examples:[],grammar:'',related:'',
+      gender:null,pluralNote:null,examples:initExamples,grammar:'',related:'',
       wordFamily:[],conjugations:null,collocations:[],
       source:r.source,allSenses:r.allSenses||[],aiEnriched:false},
     reviewCount:0,mastered:false,addedAt:Date.now()};
@@ -1146,7 +1153,11 @@ async function confirmAdd(){
       if(ai.meaning)d.meaning=ai.meaning;
       if(ai.gender)d.gender=ai.gender;
       if(ai.pluralNote)d.pluralNote=ai.pluralNote;
-      if(ai.examples?.length)d.examples=ai.examples;
+      if(ai.examples?.length){
+        // Append AI examples after user's example (don't overwrite)
+        const existing=d.examples||[];
+        d.examples=[...existing,...ai.examples.filter(ae=>!existing.some(e=>e.text===ae.text))];
+      }
       if(ai.grammar)d.grammar=ai.grammar;
       if(ai.related)d.related=ai.related;
       if(ai.wordFamily?.length)d.wordFamily=ai.wordFamily;
