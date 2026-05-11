@@ -74,6 +74,7 @@ body{background:var(--bg2);font-family:-apple-system,BlinkMacSystemFont,'SF Pro 
 .tag-ja{background:#EFF6FF;color:#1D4ED8;}
 .tag-fr{background:#F0FDF4;color:#15803D;}
 .tag-en{background:#F5F3FF;color:#6D28D9;}
+.tag-ko{background:#FFF1F2;color:#BE123C;}
 .lv-badge{font-size:11px;padding:2px 8px;border-radius:var(--r-full);font-weight:600;}
 .mastered-badge{font-size:11px;padding:2px 8px;border-radius:var(--r-full);background:var(--glb);color:var(--gd);font-weight:600;}
 
@@ -269,16 +270,17 @@ function isWhitelisted(email){
 
 const G='#22C55E',GD='#16A34A',GL='#F0FDF4',N='#0F172A';
 
-const LV_BG={A1:'#F0FDF4',A2:'#DCFCE7',B1:'#EFF6FF',B2:'#F5F3FF',C1:'#FFFBEB',C2:'#FFF1F2',N5:'#F0FDF4',N4:'#DCFCE7',N3:'#EFF6FF',N2:'#F5F3FF',N1:'#FFFBEB'};
-const LV_FG={A1:'#15803D',A2:'#166534',B1:'#1D4ED8',B2:'#6D28D9',C1:'#B45309',C2:'#BE123C',N5:'#15803D',N4:'#166534',N3:'#1D4ED8',N2:'#6D28D9',N1:'#B45309'};
-const LV_NUM={A1:1,A2:2,B1:3,B2:4,C1:5,C2:6,N5:1,N4:2,N3:3,N2:4,N1:5};
+const LV_BG={A1:'#F0FDF4',A2:'#DCFCE7',B1:'#EFF6FF',B2:'#F5F3FF',C1:'#FFFBEB',C2:'#FFF1F2',N5:'#F0FDF4',N4:'#DCFCE7',N3:'#EFF6FF',N2:'#F5F3FF',N1:'#FFFBEB',K1:'#FFF1F2',K2:'#FCE7F3',K3:'#EFF6FF',K4:'#F5F3FF',K5:'#FFFBEB',K6:'#FEF2F2'};
+const LV_FG={A1:'#15803D',A2:'#166534',B1:'#1D4ED8',B2:'#6D28D9',C1:'#B45309',C2:'#BE123C',N5:'#15803D',N4:'#166534',N3:'#1D4ED8',N2:'#6D28D9',N1:'#B45309',K1:'#BE123C',K2:'#9F1239',K3:'#1D4ED8',K4:'#6D28D9',K5:'#B45309',K6:'#991B1B'};
+const LV_NUM={A1:1,A2:2,B1:3,B2:4,C1:5,C2:6,N5:1,N4:2,N3:3,N2:4,N1:5,K1:1,K2:2,K3:3,K4:4,K5:5,K6:6};
 const EBI=[1,3,7,14];
 
 // ── Language config ──
 const LANG={
   fr:{label:'フランス語',flag:'🇫🇷',short:'フラ',bcp:'fr-FR'},
   ja:{label:'日本語',flag:'🇯🇵',short:'日本',bcp:'ja-JP'},
-  en:{label:'英語',flag:'🇬🇧',short:'英語',bcp:'en-US'}
+  en:{label:'英語',flag:'🇬🇧',short:'英語',bcp:'en-US'},
+  ko:{label:'韓国語',flag:'🇰🇷',short:'韓国',bcp:'ko-KR'}
 };
 
 // ── SVG Logo ──
@@ -398,6 +400,36 @@ const WRITING_TOPICS={
       {title:'Cultural Identity in a Globalized World',sub:'グローバル化と文化',hint:'nuanced argument + rhetorical questions',kw:['preserve','diversity','assimilate','challenge','tradition','evolving','belonging']},
       {title:'Education: Rethinking the System',sub:'教育システムの改革',hint:'critical analysis + proposal language',kw:['reform','creativity','memorization','encourage','critical thinking','purpose','outcome']},
     ],
+  },
+  ko:{
+    A1:[
+      {title:'자기 소개',sub:'自己紹介',hint:'이다/있다、이름・나이・국적',kw:['저는','입니다','이름','나라','학생','회사원','한국어']},
+      {title:'우리 가족',sub:'家族紹介',hint:'가족 단어 + 명사 + 입니다',kw:['아버지','어머니','형','누나','여동생','가족','사랑하다']},
+      {title:'좋아하는 음식',sub:'好きな食べ物',hint:'을/를 좋아하다',kw:['좋아하다','맛있다','김치','불고기','자주','먹다','맛']},
+      {title:'내 방',sub:'自分の部屋',hint:'있다/없다 + 위치 표현',kw:['책상','침대','창문','크다','작다','있다','깨끗하다']},
+      {title:'오늘 날씨',sub:'今日の天気',hint:'날씨가 + 형용사',kw:['덥다','춥다','맑다','비','오늘','날씨','바람']},
+    ],
+    A2:[
+      {title:'나의 하루',sub:'一日の流れ',hint:'시간 순서 + 그리고/그 다음에',kw:['일어나다','아침','먹다','학교','집에','저녁','자다']},
+      {title:'좋아하는 장소',sub:'お気に入りの場所',hint:'-기 때문에 / -아서/어서',kw:['장소','조용하다','분위기','가다','쉬다','좋아하다','이유']},
+      {title:'지난 주말',sub:'先週末の出来事',hint:'-았/었 過去形',kw:['갔다','먹었다','만났다','즐거웠다','친구','함께','쇼핑하다']},
+      {title:'내 취미',sub:'趣味の紹介',hint:'-는 것을 좋아하다',kw:['취미','좋아하다','재미있다','시간','음악','책','계속하다']},
+      {title:'여름 계획',sub:'夏の計画',hint:'-을/ㄹ 거예요 미래표현',kw:['계획','갈 거예요','여행','바다','친구','기대되다','이번 여름']},
+    ],
+    B1:[
+      {title:'한국 문화 소개',sub:'韓国文化の紹介',hint:'-에 따르면 / -다고 한다',kw:['전통','현대','한복','음식','문화','독특하다','즐기다']},
+      {title:'기억에 남는 여행',sub:'忘れられない旅',hint:'복합 과거 + 묘사 표현',kw:['갔다','경험하다','풍경','잊을 수 없다','아름답다','다시','추천하다']},
+      {title:'건강한 생활 습관',sub:'健康維持のコツ',hint:'-아야/어야 하다 / 충고 표현',kw:['운동','식사','균형','스트레스','수면','중요하다','꾸준히']},
+      {title:'미래의 꿈',sub:'将来の夢',hint:'-고 싶다 / -기 위해',kw:['되고 싶다','꿈','목표','노력하다','중요하다','미래','이루다']},
+      {title:'SNS 사용에 대해',sub:'SNSとの付き合い方',hint:'장점/단점 대조',kw:['편리하다','중독','정보','소통','지나치게','균형','조심하다']},
+    ],
+    B2:[
+      {title:'사회 문제에 대한 생각',sub:'社会問題への意見',hint:'문제 제기 + 근거 + 해결책',kw:['문제','해결','사회','영향','필요하다','반면에','대책']},
+      {title:'기술 발전과 우리 생활',sub:'技術と社会の変化',hint:'-에 의해 / 수동・대조 표현',kw:['발전','변화','영향','편리','과제','미래','적응하다']},
+      {title:'환경 보호',sub:'地球環境への取り組み',hint:'-야 한다 / 제안 표현',kw:['환경','온난화','대책','지속 가능','우리','행동','미래']},
+      {title:'다문화 사회',sub:'多文化共生社会',hint:'-에 대해 / 복합 접속',kw:['다양성','이해','존중','차이','공통점','사회','서로']},
+      {title:'AI 시대의 직업',sub:'AI時代の働き方',hint:'가정・추측・논리 전개',kw:['AI','자동화','인간','창의성','기술','변화','적응']},
+    ],
   }
 };
 
@@ -415,7 +447,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch{}};
 let U={email:'',sk:''};
 let S={
   tab:'words',lang:'fr',view:'list',wordsView:'words',sel:null,sortMode:'time',
-  enabledLangs:{fr:true,ja:true,en:false},
+  enabledLangs:{fr:true,ja:true,en:false,ko:false},
   tense:'present',wDifficulty:'B1',sortDir:'asc',fSentenceMode:false,fSentenceInput:'',addExample:'',fSentenceResult:null,fSentenceErr:'',fSentenceLoading:false,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,wDifficulty:'B1',sortDir:'desc',wLastTopicDate:null,detailReturnTab:null,detailReturnView:null,detailReturnPMode:null,detailReturnFIdx:null,detailReturnQIdx:null,detailReturnFFlip:null,qSess:null,qSessLang:null,
   // add
   addInput:'',addLoading:false,addAiLoading:false,addResult:null,addErr:'',addMemo:'',addSuggestions:[],addSugLoading:false,filterLevel:null,
@@ -455,6 +487,7 @@ const MILESTONE_MSG={
   fr:(n,em)=>`${em} Bravo ! Tu as appris ${n} mots !`,
   ja:(n,em)=>`${em} すごい！${n}語も覚えた！`,
   en:(n,em)=>`${em} Amazing! You've learned ${n} words!`,
+  ko:(n,em)=>`${em} 멋져요! ${n}개 단어를 익혔어요!`,
 };
 const saveWords=()=>{
   const prev=S.words.filter(w=>w.lang===S.lang&&!w.isSentence).length;
@@ -479,7 +512,7 @@ function dailyTopicIdx(len){
   const diff=d-start;
   const oneDay=1000*60*60*24;
   const dayOfYear=Math.floor(diff/oneDay);
-  const lSeed={fr:0,ja:3,en:7}[S.lang]||0;
+  const lSeed={fr:0,ja:3,en:7,ko:11}[S.lang]||0;
   return(dayOfYear+lSeed)%len;
 }
 function revisionCountToday(){
@@ -657,12 +690,65 @@ function guessDelf(w){
   return w.length<=6?'A2':w.length<=9?'B1':'B2';
 }
 
+async function lookupKo(word){
+  return _lookupKoRaw(word.trim());
+}
+
+async function _lookupKoRaw(word){
+  // 1st try: zh.wiktionary for Chinese definitions
+  try{
+    const r=await fetch('https://zh.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const koDefs=d.ko||[];
+      if(koDefs.length){
+        const senses=[];
+        koDefs.forEach(def=>{
+          const pos=def.partOfSpeech||'';
+          (def.definitions||[]).forEach(di=>{
+            const text=(di.definition||'').replace(/<[^>]*>/g,'').trim();
+            if(text)senses.push({num:senses.length+1,pos,text});
+          });
+        });
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses.slice(0,8),jlpt:null,delf:null,topik:guessTopik(word),source:'中文Wiktionary'};
+      }
+    }
+  }catch{}
+  // 2nd try: en.wiktionary ko section
+  try{
+    const r=await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(word));
+    if(r.ok){
+      const d=await r.json();
+      const koDefs=d.ko||[];
+      if(koDefs.length){
+        const senses=koDefs.slice(0,6).map((def,i)=>({
+          num:i+1,pos:def.partOfSpeech||'',
+          text:(def.definitions||[]).map(di=>(di.definition||'').replace(/<[^>]*>/g,'')).filter(Boolean).join('; ')
+        })).filter(s=>s.text);
+        if(senses.length)return{word,reading:'',meanings:senses[0].text,allSenses:senses,jlpt:null,delf:null,topik:guessTopik(word),source:'Wiktionary'};
+      }
+    }
+  }catch{}
+  throw new Error('「'+word+'」が見つかりません。スペルを確認してください。');
+}
+
+function guessTopik(w){
+  const basic=['먹다','마시다','가다','오다','보다','듣다','말하다','쓰다','읽다','자다','집','학교','가족','친구','사람','시간','음식','물','날씨','책','하다','있다','없다','크다','작다','좋다','많다','적다','새','오늘','어제','내일'];
+  if(basic.includes(w))return'K1';
+  const len=[...w].length;
+  if(len<=1)return'K1';
+  if(len<=2)return'K2';
+  if(len<=3)return'K3';
+  return'K4';
+}
+
 // ── Prompt builder (token-minimal) ──
 const FR_CONJ='{"present":[{"p":"je","f":"","i":""},{"p":"tu","f":"","i":""},{"p":"il/elle","f":"","i":""},{"p":"nous","f":"","i":""},{"p":"vous","f":"","i":""},{"p":"ils/elles","f":"","i":""}],"passe":[{"p":"j\'ai","f":""},{"p":"tu as","f":""},{"p":"il/elle a","f":""},{"p":"nous avons","f":""},{"p":"vous avez","f":""},{"p":"ils/elles ont","f":""}],"imparfait":[{"p":"je","f":""},{"p":"tu","f":""},{"p":"il/elle","f":""},{"p":"nous","f":""},{"p":"vous","f":""},{"p":"ils/elles","f":""}],"futur":[{"p":"je","f":""},{"p":"tu","f":""},{"p":"il/elle","f":""},{"p":"nous","f":""},{"p":"vous","f":""},{"p":"ils/elles","f":""}],"conditionnel":[{"p":"je","f":""},{"p":"tu","f":""},{"p":"il/elle","f":""},{"p":"nous","f":""},{"p":"vous","f":""},{"p":"ils/elles","f":""}],"subjonctif":[{"p":"que je","f":""},{"p":"que tu","f":""},{"p":"qu\'il","f":""},{"p":"que nous","f":""},{"p":"que vous","f":""},{"p":"qu\'ils","f":""}]}';
 const JA_CONJ='{"基":[{"l":"辞書形","f":"","r":""},{"l":"ます形","f":"","r":""},{"l":"て形","f":"","r":""},{"l":"た形","f":"","r":""}],"否":[{"l":"ない形","f":"","r":""},{"l":"ません","f":"","r":""}],"他":[{"l":"可能形","f":"","r":""},{"l":"意向形","f":"","r":""},{"l":"条件形","f":"","r":""}]}';
+const KO_CONJ='{"基":[{"l":"기본형","f":"","r":""},{"l":"합니다체","f":"","r":""},{"l":"해요체","f":"","r":""},{"l":"반말","f":"","r":""}],"過":[{"l":"과거 합니다체","f":"","r":""},{"l":"과거 해요체","f":"","r":""}],"応":[{"l":"부정형","f":"","r":""},{"l":"의도형","f":"","r":""},{"l":"가능형","f":"","r":""}]}';
 
-function isVerb(pos){const p=(pos||'').toLowerCase();return p.includes('verb')||p.includes('動詞')||p.includes('verbe');}
-function isNoun(pos){const p=(pos||'').toLowerCase();return p.includes('noun')||p.includes('名詞')||p.includes('nom');}
+function isVerb(pos){const p=(pos||'').toLowerCase();return p.includes('verb')||p.includes('動詞')||p.includes('verbe')||p.includes('동사')||p.includes('형용사');}
+function isNoun(pos){const p=(pos||'').toLowerCase();return p.includes('noun')||p.includes('名詞')||p.includes('nom')||p.includes('명사');}
 
 function buildPrompt(word,meaning,lang,pos){
   const vb=isVerb(pos),nn=isNoun(pos);
@@ -678,11 +764,15 @@ function buildPrompt(word,meaning,lang,pos){
     const cp=vb?',"conjugations":'+JA_CONJ:',"conjugations":null';
     return `Return ONLY valid JSON, no explanation, no markdown:\n{"meaning":"中文意思（简洁）","reading":"假名(roma)","examples":${ex2},"grammar":"中文语法要点","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}\nFill in for Japanese word「${word}」(${meaning}).`;
   }
+  if(lang==='ko'){
+    const cp=vb?',"conjugations":'+KO_CONJ:',"conjugations":null';
+    return `Return ONLY valid JSON, no explanation, no markdown:\n{"meaning":"中文意思（简洁）","reading":"한글(romanization)","examples":${ex2},"grammar":"中文1句语法要点（助词/语尾/敬语）","related":"相关词","wordFamily":${wf2}${cp},"collocations":${col3}}\nFill in for Korean word「${word}」(${meaning}). Use Revised Romanization. For verbs/adjectives include both formal (합니다체) and polite (해요체) forms.`;
+  }
   return `Return ONLY valid JSON, no explanation, no markdown:\n{"meaning":"中文意思（简洁）","reading":"/IPA/","examples":${ex2},"grammar":"中文语法要点","related":"related words","wordFamily":${wf2},"conjugations":null,"collocations":${col3}}\nFill in for English word「${word}」(${meaning}).`;
 }
 
 // ── Speech synthesis ──
-const VOICE_PREFS={fr:['Google français','Amelie','Thomas','Marie'],ja:['Google 日本語','Kyoko','Otoya','O-ren'],en:['Google US English','Samantha','Karen','Daniel']};
+const VOICE_PREFS={fr:['Google français','Amelie','Thomas','Marie'],ja:['Google 日本語','Kyoko','Otoya','O-ren'],en:['Google US English','Samantha','Karen','Daniel'],ko:['Google 한국어','Yuna','Sora','Heami']};
 let _vc={};
 function getBestVoice(lang){
   if(_vc[lang])return _vc[lang];
@@ -705,11 +795,11 @@ async function startAudioPlayback(){
   const dir=(S.sortDir||'desc')==='asc'?1:-1;
   let allSorted=[...allForLang].sort((a,b)=>-dir*(b.addedAt-a.addedAt));
   if(S.sortMode==='mastery')allSorted=[...allForLang].sort((a,b)=>dir*((b.reviewCount||0)-(a.reviewCount||0)));
-  if(S.sortMode==='level')allSorted=[...allForLang].sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99)));
+  if(S.sortMode==='level')allSorted=[...allForLang].sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf||a.data.topik)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf||b.data.topik)]||99)));
   // Apply level filter
   const list=allSorted.filter(w=>{
     if(S.filterLevel&&S.filterLevel!==''){
-      const lv=w.data&&(w.data.jlpt||w.data.delf);
+      const lv=w.data&&(w.data.jlpt||w.data.delf||w.data.topik);
       return lv===S.filterLevel;
     }
     return true;
@@ -771,7 +861,7 @@ function speak(text,lang){
 // ── Helpers ──
 const activeLangs=()=>Object.entries(S.enabledLangs).filter(([,v])=>v).map(([k])=>k);
 function tagH(l){return`<span class="tag tag-${l}">${LANG[l]?.flag||''} ${LANG[l]?.label?.slice(0,2)||l}</span>`;}
-function lvH(d){const lv=d&&(d.jlpt||d.delf);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
+function lvH(d){const lv=d&&(d.jlpt||d.delf||d.topik);if(!lv)return'';return`<span class="lv-badge" style="background:${LV_BG[lv]||'#eee'};color:${LV_FG[lv]||'#333'}">${lv}</span>`;}
 function spkH(t,l,lb){
   const e=(t||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
   return`<button class="spk-btn" onclick="speak(this.dataset.t,this.dataset.l)" data-t="${e}" data-l="${l||''}">▶${lb?' '+lb:''}</button>`;
@@ -780,7 +870,7 @@ function sorted(){
   const v=S.words.filter(w=>w.lang===S.lang&&!w.isSentence);
   const dir=(S.sortDir||'desc')==='asc'?1:-1;
   if(S.sortMode==='mastery'||S.sortMode==='added')return v.slice().sort((a,b)=>dir*((b.reviewCount||0)-(a.reviewCount||0)));
-  if(S.sortMode==='level')return v.slice().sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99)));
+  if(S.sortMode==='level')return v.slice().sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf||a.data.topik)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf||b.data.topik)]||99)));
   return v.slice().sort((a,b)=>-dir*(b.addedAt-a.addedAt));
 }
 
@@ -808,7 +898,7 @@ function wordsListH(){
   const dir=(S.sortDir||'desc')==='asc'?1:-1;
   let allSorted=[...allForLang].sort((a,b)=>-dir*(b.addedAt-a.addedAt));
   if(S.sortMode==='mastery')allSorted=[...allForLang].sort((a,b)=>dir*((b.reviewCount||0)-(a.reviewCount||0)));
-  if(S.sortMode==='level')allSorted=[...allForLang].sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf)]||99)));
+  if(S.sortMode==='level')allSorted=[...allForLang].sort((a,b)=>dir*((LV_NUM[a.data&&(a.data.jlpt||a.data.delf||a.data.topik)]||99)-(LV_NUM[b.data&&(b.data.jlpt||b.data.delf||b.data.topik)]||99)));
   const words=allSorted; // used for counts
   const pending=[];
   return`
@@ -835,7 +925,7 @@ function wordsListH(){
       ${[['time','追加順'],['mastery','⭐ 習得度'],['level','難易度']].map(([k,l])=>{const a=S.sortMode===k;const ar=a?((S.sortDir||'desc')==='asc'?' ↑':' ↓'):'';return`<button class="sort-btn${a?' active':''}" onclick="if(S.sortMode==='${k}'){S.sortDir=(S.sortDir||'desc')==='desc'?'asc':'desc';}else{S.sortMode='${k}';S.sortDir='desc';}render()">${l}${ar}</button>`;}).join('')}
     </div>
     ${(()=>{
-      const levels=S.lang==='fr'?['A1','A2','B1','B2','C1']:S.lang==='ja'?['N5','N4','N3','N2','N1']:[];
+      const levels=S.lang==='fr'?['A1','A2','B1','B2','C1']:S.lang==='ja'?['N5','N4','N3','N2','N1']:S.lang==='ko'?['K1','K2','K3','K4','K5','K6']:[];
       if(!levels.length||S.wordsView==='sentences')return'';
       return`<div class="sort-bar" style="margin-top:-6px">
         ${[['','全て'],...levels.map(l=>[l,l])].map(([k,l])=>`<button class="sort-btn${(S.filterLevel||'')===''+k?' active':''}" onclick="S.filterLevel='${k}';render()" style="${(S.filterLevel||'')===''+k?'':'font-weight:400'}">${l||'全て'}</button>`).join('')}
@@ -849,7 +939,7 @@ function wordsListH(){
     ${words.filter(w=>{
       if(S.wordsView==='sentences'?!w.isSentence:w.isSentence)return false;
       if(S.filterLevel&&S.filterLevel!==''){
-        const lv=w.data&&(w.data.jlpt||w.data.delf);
+        const lv=w.data&&(w.data.jlpt||w.data.delf||w.data.topik);
         if(lv!==S.filterLevel)return false;
       }
       return true;
@@ -921,6 +1011,7 @@ async function doLookup(){
   try{
     if(S.lang==='fr') S.addResult=await lookupFr(word);
     else if(S.lang==='ja') S.addResult=await lookupJa(word);
+    else if(S.lang==='ko') S.addResult=await lookupKo(word);
     else S.addResult=await lookupEn(word);
   }catch(e){
     S.addErr=e.message||'見つかりませんでした';
@@ -947,7 +1038,7 @@ function addH(){
     </div>
     <div style="display:flex;gap:8px;margin-bottom:4px">
       <input id="addInput" class="inp" style="flex:1"
-        placeholder="${S.lang==='ja'?'例：食べる、綺麗':S.lang==='fr'?'例：partir, merveilleux':'例：beautiful, adventure'}"
+        placeholder="${S.lang==='ja'?'例：食べる、綺麗':S.lang==='fr'?'例：partir, merveilleux':S.lang==='ko'?'例：먹다、예쁘다':'例：beautiful, adventure'}"
         value="${S.addInput.replace(/"/g,'&quot;')}" oninput="S.addInput=this.value"
         onkeydown="if(event.key==='Enter')doLookup()"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -961,7 +1052,7 @@ function addH(){
       <div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;margin-top:12px">
         <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:10px">📝 手動で直接追加</div>
         <input class="inp" id="manualMeaning" placeholder="中文释义（必须）" style="margin-bottom:8px">
-        <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':'発音（任意）'}" style="margin-bottom:12px">
+        <input class="inp" id="manualReading" placeholder="${S.lang==='fr'?'発音/IPA（任意）':S.lang==='ja'?'読み方（任意）':S.lang==='ko'?'한글/ローマ字（任意）':'発音（任意）'}" style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button id="manualTypeWord" onclick="setManualType('word')" style="flex:1;padding:9px;border-radius:var(--r);border:1.5px solid var(--g);background:var(--gl);color:var(--gd);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;">📚 単語</button>
           <button id="manualTypeSent" onclick="setManualType('sentence')" style="flex:1;padding:9px;border-radius:var(--r);border:1.5px solid var(--bd);background:transparent;color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;touch-action:manipulation;">📖 例句</button>
@@ -1107,6 +1198,7 @@ function quickAdd(){
     data:{word:r.word,reading:r.reading||'',meaning,
       delf:S.lang==='fr'?r.delf||null:null,
       jlpt:S.lang==='ja'?r.jlpt||null:null,
+      topik:S.lang==='ko'?r.topik||null:null,
       gender:null,pluralNote:null,examples,grammar:'',related:'',
       wordFamily:[],conjugations:null,collocations:[],
       source:r.source||'辞書',allSenses:r.allSenses||[],aiEnriched:false},
@@ -1135,7 +1227,7 @@ async function confirmAdd(){
   const initExamples=exText?[{text:exText,trans:''}]:[];
   const nw={id:Date.now().toString(),word:r.word,lang:S.lang,isSentence:isSentenceEntry,
     data:{word:r.word,reading:r.reading||'',meaning,
-      delf:S.lang==='fr'?r.delf||null:null,jlpt:S.lang==='ja'?r.jlpt||null:null,
+      delf:S.lang==='fr'?r.delf||null:null,jlpt:S.lang==='ja'?r.jlpt||null:null,topik:S.lang==='ko'?r.topik||null:null,
       gender:null,pluralNote:null,examples:initExamples,grammar:'',related:'',
       wordFamily:[],conjugations:null,collocations:[],
       source:r.source,allSenses:r.allSenses||[],aiEnriched:false},
@@ -1316,6 +1408,16 @@ function conjH(c,lang){
         <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">${jaLabels[t]||t}</div>
         <table class="conj-table">
           ${rows.map(r=>`<tr><th>${r.label||r.l||''}</th><td>${r.form||r.f||''} <span class="ipa">${r.reading||r.r||''}</span> ${spkH(r.form||r.f||'','ja')}</td></tr>`).join('')}
+        </table>
+      </div>`).join('');
+  }
+  if(lang==='ko'){
+    const koLabels={基:'基本形',過:'過去形',応:'応用形',基本:'基本形',過去:'過去形',応用:'応用形'};
+    return`<div class="sec-lbl">動詞活用</div>`+Object.entries(c).map(([t,rows])=>`
+      <div class="conj-sec">
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">${koLabels[t]||t}</div>
+        <table class="conj-table">
+          ${rows.map(r=>`<tr><th>${r.label||r.l||''}</th><td>${r.form||r.f||''} <span class="ipa">${r.reading||r.r||''}</span> ${spkH(r.form||r.f||'','ko')}</td></tr>`).join('')}
         </table>
       </div>`).join('');
   }
@@ -1728,7 +1830,7 @@ async function doWritingFS(){
   if(today>=3||S.wRevCount>=3){S.wErr='✏️ 今日の添削は3回まで。よく頑張りました！明日（'+tomorrowStr()+'）また来てね ';render();return;}
   S.wLoad=true;S.wErr='';render(); // render() keeps fullscreen open (wFullscreen=true) with loading state
   const {topic}=getWritingTopic();
-  const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
+  const langName={fr:'法语',ja:'日语',en:'英语',ko:'韩语'}[S.lang]||'英语';
   try{
     const diffNote={A1:'A1初级',A2:'A2基础',B1:'B1中级',B2:'B2中高级'}[S.wDifficulty||'B1'];
     const t=await callApiSonnet(`你是专业${langName}教师(${diffNote})。添削作文主题「${topic.title}」：\n\n${S.wText.trim()}\n\nJSON only:{"score":1-10,"corrected":"修正后文章","errors":[{"type":"","original":"","fixed":"","note":""}],"praise":""}`,1000);
@@ -1780,7 +1882,7 @@ async function doWriting(){
   const topics=WRITING_TOPICS[S.lang]||WRITING_TOPICS.en;
   const ti=S.wTopicIdx!==null?S.wTopicIdx:dailyTopicIdx(topics.length);
   const topic=topics[ti];
-  const langName={fr:'法语',ja:'日语',en:'英语'}[S.lang]||'英语';
+  const langName={fr:'法语',ja:'日语',en:'英语',ko:'韩语'}[S.lang]||'英语';
   try{
     const diffNote={A1:'A1初级',A2:'A2基础',B1:'B1中级',B2:'B2中高级'}[S.wDifficulty||'B1'];
     const t=await callApiSonnet(`你是专业${langName}教师(${diffNote})。添削作文主题「${topic.title}」：\\
@@ -1903,10 +2005,10 @@ async function startImport(){
     if(stEl)stEl.textContent='⏳';
     if(stTxt)stTxt.textContent=`${done+1}/${pending.length} 検索中: ${item.word}`;
     try{
-      const result=item.lang==='ja'?await lookupJa(item.word):item.lang==='fr'?await lookupFr(item.word):await lookupEn(item.word);
+      const result=item.lang==='ja'?await lookupJa(item.word):item.lang==='fr'?await lookupFr(item.word):item.lang==='ko'?await lookupKo(item.word):await lookupEn(item.word);
       const nw={id:Date.now().toString()+i,word:item.word,lang:item.lang,
         data:{word:result.word,reading:result.reading||'',meaning:result.allSenses?.[0]?.text||result.meanings||'',
-          delf:item.lang==='fr'?result.delf||null:null,jlpt:item.lang==='ja'?result.jlpt||null:null,
+          delf:item.lang==='fr'?result.delf||null:null,jlpt:item.lang==='ja'?result.jlpt||null:null,topik:item.lang==='ko'?result.topik||null:null,
           gender:null,pluralNote:null,examples:[],grammar:'',related:'',wordFamily:[],
           conjugations:null,collocations:[],source:result.source,allSenses:result.allSenses||[],aiEnriched:false},
         reviewCount:0,mastered:false,addedAt:Date.now()-i*1000};
@@ -1993,7 +2095,7 @@ function statsH(){
   const todayAdded=ws.filter(w=>new Date(w.addedAt).toISOString().slice(0,10)===todayStr()).length;
   const masteryPct=tot?Math.round(mas/tot*100):0;
   const today=new Date().getDay();
-  const lv={};ws.forEach(w=>{const k=w.data&&(w.data.jlpt||w.data.delf);if(k)lv[k]=(lv[k]||0)+1;});
+  const lv={};ws.forEach(w=>{const k=w.data&&(w.data.jlpt||w.data.delf||w.data.topik);if(k)lv[k]=(lv[k]||0)+1;});
   // 作文統計
   const essays=(S.wHistory||[]).filter(e=>e.lang===S.lang);
   const essayCount=essays.filter(e=>!e.revNum||e.revNum===1).length;
@@ -2031,12 +2133,12 @@ function statsH(){
       const byLang={};
       allWords.forEach(w=>{
         const lang=w.lang;
-        const lv=w.data&&(w.data.delf||w.data.jlpt)||null;
+        const lv=w.data&&(w.data.delf||w.data.jlpt||w.data.topik)||null;
         if(!byLang[lang])byLang[lang]={total:0,leveled:0,lvs:{}};
         byLang[lang].total++;
         if(lv){byLang[lang].leveled++;byLang[lang].lvs[lv]=(byLang[lang].lvs[lv]||0)+1;}
       });
-      const langNames={fr:'フランス語',ja:'日本語',en:'英語'};
+      const langNames={fr:'フランス語',ja:'日本語',en:'英語',ko:'韓国語'};
       const parts=Object.entries(byLang).map(([lang,data])=>{
         const flag=(LANG[lang]&&LANG[lang].flag)||'';
         const lvBadges=Object.entries(data.lvs).sort().map(([k,n])=>`<span class="lv-badge" style="background:${LV_BG[k]||'#f1f5f9'};color:${LV_FG[k]||'#64748b'}">${k} ${n}</span>`).join('');
@@ -2540,7 +2642,7 @@ function sentencePracticeH(w,todayCount,canSentence){
       </div>
     `:!r?`
       <textarea id="sentInput" class="textarea" style="min-height:90px;font-size:15px;margin-bottom:10px"
-        placeholder="${w.lang==='fr'?'Utilisez «'+w.data.word+'» dans une phrase...':w.lang==='ja'?'「'+w.data.word+'」を使った文を書いてください...':'Write a sentence using «'+w.data.word+'»...'}"
+        placeholder="${w.lang==='fr'?'Utilisez «'+w.data.word+'» dans une phrase...':w.lang==='ja'?'「'+w.data.word+'」を使った文を書いてください...':w.lang==='ko'?'«'+w.data.word+'»를 사용해 문장을 만들어 보세요...':'Write a sentence using «'+w.data.word+'»...'}"
         oninput="S.fSentenceInput=this.value;const btn=document.getElementById('sentSubmitBtn');if(btn)btn.disabled=!this.value.trim()||S.fSentenceLoading;">${S.fSentenceInput}</textarea>
       ${S.fSentenceErr?`<div class="err-msg" style="margin-bottom:8px">${S.fSentenceErr}</div>`:''}
       <button id="sentSubmitBtn" class="btn" onclick="doSentenceCheck('${w.id}','${(w.data.word||'').replace(/'/g,"\'")}','${w.lang}')"
@@ -2565,7 +2667,7 @@ async function doSentenceCheck(wordId,word,lang){
   if(!txt.trim())return;
   if(sentenceCountToday(wordId)>=10){S.fSentenceErr='今日はすでに10回練習しました';render();return;}
   S.fSentenceLoading=true;S.fSentenceErr='';render();
-  const langName={fr:'フランス語',ja:'日本語',en:'英語'}[lang]||'英語';
+  const langName={fr:'フランス語',ja:'日本語',en:'英語',ko:'韓国語'}[lang]||'英語';
   try{
     const t=await callApi('あなたは'+langName+'の先生です。生徒が「'+word+'」を使って作った文を添削してください。\nJSON形式のみで返してください: {"score":1-10,"corrected":"修正後の文","note":"日本語で1-2文のアドバイス"}\n\n生徒の文: '+txt.trim(),350);
     const ai=extractJSON(t);
@@ -2605,7 +2707,8 @@ function goPracticeFromDetail(wordId){
 const QUIZ_BANK={
   fr:[{word:'être',meaning:'〜である'},{word:'avoir',meaning:'持つ'},{word:'aller',meaning:'行く'},{word:'faire',meaning:'する'},{word:'dire',meaning:'言う'},{word:'voir',meaning:'見る'},{word:'vouloir',meaning:'望む'},{word:'pouvoir',meaning:'できる'},{word:'savoir',meaning:'知る'},{word:'venir',meaning:'来る'},{word:'prendre',meaning:'取る'},{word:'partir',meaning:'出発する'},{word:'mettre',meaning:'置く'},{word:'donner',meaning:'与える'},{word:'parler',meaning:'話す'},{word:'aimer',meaning:'好む'},{word:'manger',meaning:'食べる'},{word:'boire',meaning:'飲む'},{word:'dormir',meaning:'眠る'},{word:'lire',meaning:'読む'},{word:'maison',meaning:'家'},{word:'famille',meaning:'家族'},{word:'ami',meaning:'友人'},{word:'école',meaning:'学校'},{word:'travail',meaning:'仕事'},{word:'beau',meaning:'美しい'},{word:'grand',meaning:'大きい'},{word:'petit',meaning:'小さい'},{word:'nouveau',meaning:'新しい'},{word:'souvent',meaning:'よく'},{word:'toujours',meaning:'いつも'}],
   ja:[{word:'食べる',reading:'たべる',meaning:'食べる'},{word:'飲む',reading:'のむ',meaning:'飲む'},{word:'見る',reading:'みる',meaning:'見る'},{word:'聞く',reading:'きく',meaning:'聞く'},{word:'話す',reading:'はなす',meaning:'話す'},{word:'書く',reading:'かく',meaning:'書く'},{word:'行く',reading:'いく',meaning:'行く'},{word:'来る',reading:'くる',meaning:'来る'},{word:'大きい',reading:'おおきい',meaning:'大きい'},{word:'小さい',reading:'ちいさい',meaning:'小さい'},{word:'学校',reading:'がっこう',meaning:'学校'},{word:'天気',reading:'てんき',meaning:'天気'},{word:'時間',reading:'じかん',meaning:'時間'}],
-  en:[{word:'run',meaning:'走る'},{word:'walk',meaning:'歩く'},{word:'eat',meaning:'食べる'},{word:'drink',meaning:'飲む'},{word:'read',meaning:'読む'},{word:'beautiful',meaning:'美しい'},{word:'happy',meaning:'幸せな'},{word:'school',meaning:'学校'},{word:'family',meaning:'家族'},{word:'water',meaning:'水'},{word:'time',meaning:'時間'},{word:'friend',meaning:'友人'}]
+  en:[{word:'run',meaning:'走る'},{word:'walk',meaning:'歩く'},{word:'eat',meaning:'食べる'},{word:'drink',meaning:'飲む'},{word:'read',meaning:'読む'},{word:'beautiful',meaning:'美しい'},{word:'happy',meaning:'幸せな'},{word:'school',meaning:'学校'},{word:'family',meaning:'家族'},{word:'water',meaning:'水'},{word:'time',meaning:'時間'},{word:'friend',meaning:'友人'}],
+  ko:[{word:'먹다',reading:'meokda',meaning:'食べる'},{word:'마시다',reading:'masida',meaning:'飲む'},{word:'가다',reading:'gada',meaning:'行く'},{word:'오다',reading:'oda',meaning:'来る'},{word:'보다',reading:'boda',meaning:'見る'},{word:'듣다',reading:'deutda',meaning:'聞く'},{word:'말하다',reading:'malhada',meaning:'話す'},{word:'쓰다',reading:'sseuda',meaning:'書く'},{word:'읽다',reading:'ikda',meaning:'読む'},{word:'자다',reading:'jada',meaning:'寝る'},{word:'좋아하다',reading:'joahada',meaning:'好き'},{word:'크다',reading:'keuda',meaning:'大きい'},{word:'작다',reading:'jakda',meaning:'小さい'},{word:'좋다',reading:'jota',meaning:'良い'},{word:'집',reading:'jip',meaning:'家'},{word:'학교',reading:'hakgyo',meaning:'学校'},{word:'가족',reading:'gajok',meaning:'家族'},{word:'친구',reading:'chingu',meaning:'友達'},{word:'사람',reading:'saram',meaning:'人'},{word:'시간',reading:'sigan',meaning:'時間'},{word:'음식',reading:'eumsik',meaning:'食べ物'},{word:'물',reading:'mul',meaning:'水'}]
 };
 function getDistractors(correctWord,lang,count=3){
   const myWords=S.words.filter(w=>w.lang===lang&&w.id!==correctWord.id&&!w.isSentence);
@@ -2638,7 +2741,8 @@ function buildQSess(lang){
 const STARTER_WORDS={
   fr:[{word:'néanmoins',meaning:'それにもかかわらず',pos:'adverb'},{word:'davantage',meaning:'さらに多く',pos:'adverb'},{word:'désormais',meaning:'今後は',pos:'adverb'},{word:'cependant',meaning:'しかし',pos:'adverb'},{word:'notamment',meaning:'特に',pos:'adverb'},{word:'atteindre',meaning:'達成する',pos:'verb'},{word:'prévenir',meaning:'予防する',pos:'verb'},{word:'soutenir',meaning:'支持する',pos:'verb'},{word:'constater',meaning:'確認する',pos:'verb'},{word:'envisager',meaning:'検討する',pos:'verb'},{word:'entreprise',meaning:'企業',pos:'noun'},{word:'démarche',meaning:'取り組み',pos:'noun'},{word:'enjeu',meaning:'課題',pos:'noun'},{word:'perspective',meaning:'視点',pos:'noun'},{word:'exiger',meaning:'要求する',pos:'verb'}],
   ja:[{word:'雰囲気',reading:'ふんいき',meaning:'雰囲気',pos:'noun'},{word:'承知する',reading:'しょうちする',meaning:'了承する',pos:'verb'},{word:'把握する',reading:'はあくする',meaning:'把握する',pos:'verb'},{word:'取り組む',reading:'とりくむ',meaning:'取り組む',pos:'verb'},{word:'いわゆる',reading:'いわゆる',meaning:'いわゆる',pos:'adverb'},{word:'課題',reading:'かだい',meaning:'課題',pos:'noun'},{word:'状況',reading:'じょうきょう',meaning:'状況',pos:'noun'},{word:'経験',reading:'けいけん',meaning:'経験',pos:'noun'},{word:'影響',reading:'えいきょう',meaning:'影響',pos:'noun'},{word:'提案する',reading:'ていあんする',meaning:'提案する',pos:'verb'},{word:'確認する',reading:'かくにんする',meaning:'確認する',pos:'verb'},{word:'大切にする',reading:'たいせつにする',meaning:'大切にする',pos:'verb'},{word:'なるほど',reading:'なるほど',meaning:'なるほど',pos:'interjection'},{word:'もったいない',reading:'もったいない',meaning:'無駄にする',pos:'adjective'},{word:'見直す',reading:'みなおす',meaning:'再検討する',pos:'verb'}],
-  en:[{word:'nevertheless',meaning:'それにもかかわらず',pos:'adverb'},{word:'substantial',meaning:'相当な',pos:'adjective'},{word:'regardless',meaning:'それでも',pos:'adverb'},{word:'acknowledge',meaning:'認める',pos:'verb'},{word:'implement',meaning:'実施する',pos:'verb'},{word:'perspective',meaning:'視点',pos:'noun'},{word:'consequence',meaning:'結果',pos:'noun'},{word:'demonstrate',meaning:'実証する',pos:'verb'},{word:'distinguish',meaning:'区別する',pos:'verb'},{word:'appropriate',meaning:'適切な',pos:'adjective'},{word:'significant',meaning:'重要な',pos:'adjective'},{word:'challenge',meaning:'挑戦',pos:'noun'},{word:'opportunity',meaning:'機会',pos:'noun'},{word:'contribute',meaning:'貢献する',pos:'verb'},{word:'circumstance',meaning:'状況',pos:'noun'}]
+  en:[{word:'nevertheless',meaning:'それにもかかわらず',pos:'adverb'},{word:'substantial',meaning:'相当な',pos:'adjective'},{word:'regardless',meaning:'それでも',pos:'adverb'},{word:'acknowledge',meaning:'認める',pos:'verb'},{word:'implement',meaning:'実施する',pos:'verb'},{word:'perspective',meaning:'視点',pos:'noun'},{word:'consequence',meaning:'結果',pos:'noun'},{word:'demonstrate',meaning:'実証する',pos:'verb'},{word:'distinguish',meaning:'区別する',pos:'verb'},{word:'appropriate',meaning:'適切な',pos:'adjective'},{word:'significant',meaning:'重要な',pos:'adjective'},{word:'challenge',meaning:'挑戦',pos:'noun'},{word:'opportunity',meaning:'機会',pos:'noun'},{word:'contribute',meaning:'貢献する',pos:'verb'},{word:'circumstance',meaning:'状況',pos:'noun'}],
+  ko:[{word:'안녕하세요',reading:'annyeonghaseyo',meaning:'こんにちは',pos:'interjection'},{word:'감사합니다',reading:'gamsahamnida',meaning:'ありがとうございます',pos:'interjection'},{word:'먹다',reading:'meokda',meaning:'食べる',pos:'동사'},{word:'마시다',reading:'masida',meaning:'飲む',pos:'동사'},{word:'가다',reading:'gada',meaning:'行く',pos:'동사'},{word:'오다',reading:'oda',meaning:'来る',pos:'동사'},{word:'좋아하다',reading:'joahada',meaning:'好む',pos:'동사'},{word:'사랑하다',reading:'saranghada',meaning:'愛する',pos:'동사'},{word:'예쁘다',reading:'yeppeuda',meaning:'きれい',pos:'형용사'},{word:'재미있다',reading:'jaemiitda',meaning:'面白い',pos:'형용사'},{word:'가족',reading:'gajok',meaning:'家族',pos:'명사'},{word:'친구',reading:'chingu',meaning:'友達',pos:'명사'},{word:'학교',reading:'hakgyo',meaning:'学校',pos:'명사'},{word:'한국',reading:'hanguk',meaning:'韓国',pos:'명사'},{word:'시간',reading:'sigan',meaning:'時間',pos:'명사'}]
 };
 function injectStarterWords(langs){
   const now=Date.now();
